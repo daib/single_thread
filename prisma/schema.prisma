@@ -7,14 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Stored account rows (display name, handle, bio). Prisma model name avoids clashing with Auth.js "Account".
+/// One row per signed-in user (Auth.js JWT `sub` / `session.user.id`).
 model AppAccount {
-  id          String   @id @default(uuid())
-  handle      String   @unique
-  displayName String   @map("display_name")
+  id          String       @id @default(uuid())
+  userId      String       @unique @map("user_id")
+  handle      String       @unique
+  displayName String       @map("display_name")
   bio         String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  profiles    AppProfile[]
 
   @@map("accounts")
+}
+
+/// Persona under an account; handle unique within that account.
+model AppProfile {
+  id          String     @id @default(uuid())
+  accountId   String     @map("account_id")
+  account     AppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  displayName String     @map("display_name")
+  handle      String
+  bio         String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@unique([accountId, handle])
+  @@map("profiles")
 }

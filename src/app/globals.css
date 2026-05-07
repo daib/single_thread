@@ -502,10 +502,24 @@ textarea {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.account-layout-forms {
+  margin-bottom: 0.25rem;
+}
+
 @media (min-width: 800px) {
   .account-layout {
     grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
     align-items: start;
+  }
+
+  .account-layout-forms {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .account-layout-forms {
+    grid-template-columns: repeat(2, minmax(280px, 400px));
   }
 }
 
@@ -524,6 +538,38 @@ textarea {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+.account-card-lede {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.account-wide-card {
+  max-width: 880px;
+}
+
+.account-select {
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-root);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.account-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.account-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .account-form {
@@ -658,6 +704,74 @@ textarea {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.account-profile-target {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.account-profile-target-handle {
+  font-family: ui-monospace, monospace;
+  color: var(--accent);
+}
+
+.account-profile-empty {
+  margin: 0.65rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.account-profile-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0 0 0 0.85rem;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.account-profile-item {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.account-profile-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+}
+
+.account-profile-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.account-profile-handle {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+}
+
+.account-profile-bio {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.account-profile-meta {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }

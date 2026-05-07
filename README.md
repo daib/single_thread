@@ -1,6 +1,6 @@
 # Single-thread chat
 
-TypeScript + React + **Next.js** (App Router) UI: a sidebar to choose a conversation, a main pane for the thread, and a message composer. **Account** records (display name, handle, bio) can be created and stored in **Postgres** via Prisma.
+TypeScript + React + **Next.js** (App Router) UI: a sidebar to choose a conversation, a main pane for the thread, and a message composer. Each signed-in user has **at most one account** (name + unique handle + optional bio, keyed by Auth.js user id); **profiles** (multiple: name, handle, optional bio) are stored under that account in **Postgres** via Prisma.
 
 **Stack:** Next.js 15, React 19, Prisma, PostgreSQL, [Auth.js](https://authjs.dev) (Google + optional Facebook).
 
@@ -125,7 +125,7 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 - **Chat** (`/`) — in-memory demo conversations (unchanged).
-- **Account** (`/account`) — create account rows (display name, unique handle, optional bio); list is loaded from Postgres.
+- **Account** (`/account`) — **one account per sign-in**; create it once (name + globally unique handle + optional bio), then add **profiles** (name, handle unique per account, optional bio); list is loaded from Postgres.
 
 Use a different port:
 
@@ -146,8 +146,9 @@ Ensure `DATABASE_URL` is set in the environment and migrations have been applied
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/account` | JSON list of accounts (newest first) |
-| `POST` | `/api/account` | JSON body: `{ "displayName", "handle", "bio?" }`. `handle`: 2–31 chars, lowercase `a-z`, digits, `_`, `-` |
+| `GET` | `/api/account` | The **current user’s** account (0 or 1 row) with nested `profiles`, or `[]` if none yet |
+| `POST` | `/api/account` | JSON: `{ "displayName", "handle", "bio?" }`. Stores the row for `session.user.id` (JWT `sub`). **409** if you already have an account. `handle` globally unique; `bio` optional, max 2000 chars |
+| `POST` | `/api/account/:accountId/profiles` | JSON: `{ "displayName", "handle", "bio?" }`. **404** if `:accountId` is not yours. Profile `handle` unique within that account |
 
 ## Docker Compose (optional)
 
@@ -173,13 +174,15 @@ If the Next.js app ran **inside** Docker as well, the DB host in `DATABASE_URL` 
 | Path | Purpose |
 |------|---------|
 | `scripts/init-db.sh` | Create DB + app role + run `prisma migrate deploy` (`npm run db:init`) |
-| `prisma/schema.prisma` | `AppAccount` model → `accounts` table |
-| `prisma/migrations/` | SQL migrations (includes `profiles` → `accounts` rename) |
+| `prisma/schema.prisma` | `AppAccount` (`user_id` unique → one per Auth user), `AppProfile` → `profiles` |
+| `prisma/migrations/` | SQL migrations (historical rename + nested `profiles`) |
 | `src/lib/prisma.ts` | Shared `PrismaClient` instance |
-| `src/app/api/account/route.ts` | Account REST API |
-| `src/app/account/page.tsx` | Account UI (server-rendered list) |
+| `src/app/api/account/route.ts` | Account list + create |
+| `src/app/api/account/[accountId]/profiles/route.ts` | Create profile under an account |
+| `src/app/account/page.tsx` | Account UI (accounts with nested profiles) |
 | `src/components/AccountCreateForm.tsx` | Create-account form (client) |
-| `src/auth.ts` | Auth.js config (Google provider, `authorized` callback) |
+| `src/components/ProfileCreateForm.tsx` | Create-profile form (client) |
+| `src/auth.ts` | Auth.js config (`session.user.id` from JWT `sub`, `authorized` for `/account`) |
 | `src/middleware.ts` | Requires sign-in for `/account` |
 | `src/app/api/auth/[...nextauth]/route.ts` | Auth.js route handlers |
 | `src/components/AppNav.tsx` | Top nav: Chat / Account when signed in |
@@ -194,4 +197,4 @@ Imports can use the `@/*` alias (see `tsconfig.json` → `paths`).
 ## Behavior
 
 - **Chat:** data stays in React state; the demo still appends a fake assistant reply. Customize `sendMessage` in `src/components/ChatApp.tsx` for a real backend.
-- **Account:** persisted in Postgres (`accounts` table) through Prisma; create flow posts to `/api/account` and refreshes the server-rendered list.
+- **Account:** `accounts.user_id` matches the signed-in Auth.js user; each user sees and creates at most one account; profiles hang off that row. API and UI scope by `session.user.id`.
