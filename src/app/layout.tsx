@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { DM_Sans } from "next/font/google";
+import { AppNav } from "@/components/AppNav";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -21,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={dmSans.variable}>
-      <body>{children}</body>
+      <body>
+        <AppNav />
+        <div className="app-main">{children}</div>
+      </body>
     </html>
   );
 }
