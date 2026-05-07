@@ -541,6 +541,12 @@ textarea {
   font-weight: 400;
 }
 
+.subtitle-branch {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;

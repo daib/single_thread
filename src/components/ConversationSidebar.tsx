@@ -8,6 +8,7 @@ interface Props {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onNewChat: () => void;
+  onBranch: (id: string) => void;
 }
 
 export function ConversationSidebar({
@@ -16,6 +17,7 @@ export function ConversationSidebar({
   onSelect,
   onDelete,
   onNewChat,
+  onBranch,
 }: Props) {
   const sorted = [...conversations].sort(
     (a, b) =>
@@ -53,6 +55,9 @@ export function ConversationSidebar({
                 conversationLabel={c.title}
                 variant="sidebar"
                 onDelete={() => onDelete(c.id)}
+                onBranch={
+                  c.messages.length > 0 ? () => onBranch(c.id) : undefined
+                }
               />
             </li>
           );

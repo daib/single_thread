@@ -6,11 +6,18 @@ type Props = {
   /** Shown to screen readers on the ⋮ trigger (e.g. chat title). */
   conversationLabel: string;
   onDelete: () => void;
+  /** Fork this thread into a new conversation (omit when there is nothing to copy). */
+  onBranch?: () => void;
   /** Wider touch target in the main chat header. */
   variant?: "sidebar" | "header";
 };
 
-export function ChatMoreMenu({ conversationLabel, onDelete, variant = "sidebar" }: Props) {
+export function ChatMoreMenu({
+  conversationLabel,
+  onDelete,
+  onBranch,
+  variant = "sidebar",
+}: Props) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +62,20 @@ export function ChatMoreMenu({ conversationLabel, onDelete, variant = "sidebar" 
       </button>
       {open ? (
         <div className="chat-more-dropdown" role="menu">
+          {onBranch ? (
+            <button
+              type="button"
+              className="chat-more-item"
+              role="menuitem"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBranch();
+                setOpen(false);
+              }}
+            >
+              Branch
+            </button>
+          ) : null}
           <button
             type="button"
             className="chat-more-item chat-more-item-danger"

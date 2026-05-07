@@ -223,6 +223,37 @@ export function ChatApp() {
     setSelectedConvId(id);
   }, [selectedProfileId]);
 
+  const branchConversation = useCallback(
+    (conversationId: string) => {
+      const pid = selectedProfileId;
+      if (!pid) return;
+      const source = conversations.find(
+        (c) => c.id === conversationId && c.profileId === pid,
+      );
+      if (!source || source.messages.length === 0) return;
+
+      const now = new Date().toISOString();
+      const id = nextId("c");
+      const truncated =
+        source.title.length > 52 ? `${source.title.slice(0, 52)}…` : source.title;
+      const branched: Conversation = {
+        id,
+        profileId: pid,
+        branchOfId: source.id,
+        title: `Branch · ${truncated}`,
+        preview: source.preview,
+        updatedAt: now,
+        messages: source.messages.map((m) => ({
+          ...m,
+          id: nextId("m"),
+        })),
+      };
+      setConversations((prev) => [...prev, branched]);
+      setSelectedConvId(id);
+    },
+    [selectedProfileId, conversations],
+  );
+
   const authLoading = status === "loading" || (status === "authenticated" && !profilesReady);
   const needsProfile =
     status === "authenticated" && profilesReady && profileList.length === 0;
@@ -259,12 +290,14 @@ export function ChatApp() {
             onSelect={setSelectedConvId}
             onDelete={deleteConversation}
             onNewChat={createNewChat}
+            onBranch={branchConversation}
           />
           <ChatPanel
             conversation={active}
             activeProfile={activeProfile}
             onSend={sendMessage}
             onDelete={deleteConversation}
+            onBranch={branchConversation}
           />
         </div>
       )}

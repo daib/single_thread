@@ -8,6 +8,7 @@ interface Props {
   activeProfile?: ChatProfileOption | null;
   onSend: (conversationId: string, body: string) => void;
   onDelete: (conversationId: string) => void;
+  onBranch: (conversationId: string) => void;
 }
 
 function MessageBubble({ message }: { message: Message }) {
@@ -27,7 +28,7 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-export function ChatPanel({ conversation, activeProfile, onSend, onDelete }: Props) {
+export function ChatPanel({ conversation, activeProfile, onSend, onDelete, onBranch }: Props) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -72,12 +73,25 @@ export function ChatPanel({ conversation, activeProfile, onSend, onDelete }: Pro
               </>
             ) : null}
             {conversation.messages.length} messages
+            {conversation.branchOfId ? (
+              <>
+                <span className="subtitle-sep" aria-hidden>
+                  ·
+                </span>
+                <span className="subtitle-branch">Branched</span>
+              </>
+            ) : null}
           </p>
         </div>
         <ChatMoreMenu
           conversationLabel={conversation.title}
           variant="header"
           onDelete={() => onDelete(conversation.id)}
+          onBranch={
+            conversation.messages.length > 0
+              ? () => onBranch(conversation.id)
+              : undefined
+          }
         />
       </header>
       <div className="messages">
