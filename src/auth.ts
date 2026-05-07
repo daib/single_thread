@@ -11,6 +11,9 @@ if (process.env.AUTH_FACEBOOK_ID?.trim() && process.env.AUTH_FACEBOOK_SECRET?.tr
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers,
+  pages: {
+    signIn: "/login",
+  },
   callbacks: {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;

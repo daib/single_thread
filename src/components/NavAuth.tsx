@@ -1,13 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { signIn, signOut, useSession } from "next-auth/react";
+import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 
-interface NavAuthProps {
-  facebookEnabled: boolean;
-}
-
-export function NavAuth({ facebookEnabled }: NavAuthProps) {
+export function NavAuth() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
@@ -16,29 +13,21 @@ export function NavAuth({ facebookEnabled }: NavAuthProps) {
 
   if (!session?.user) {
     return (
-      <div className="app-nav-auth-signin">
-        <button
-          type="button"
-          className="app-nav-auth-btn app-nav-auth-btn-primary"
-          onClick={() => signIn("google", { callbackUrl: "/" })}
-        >
-          Google
-        </button>
-        {facebookEnabled ? (
-          <button
-            type="button"
-            className="app-nav-auth-btn app-nav-auth-btn-facebook"
-            onClick={() => signIn("facebook", { callbackUrl: "/" })}
-          >
-            Facebook
-          </button>
-        ) : null}
-      </div>
+      <Link
+        href={`/login?callbackUrl=${encodeURIComponent("/")}`}
+        prefetch={false}
+        className="app-nav-link app-nav-link-signin"
+      >
+        Sign in
+      </Link>
     );
   }
 
   return (
     <div className="app-nav-auth">
+      <Link href="/profiles" className="app-nav-link">
+        Profiles
+      </Link>
       {session.user.image ? (
         <Image
           src={session.user.image}

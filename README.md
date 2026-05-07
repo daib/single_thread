@@ -40,6 +40,8 @@ Shared:
 - `AUTH_SECRET` — random string, e.g. `openssl rand -base64 32`
 - Optional: `AUTH_URL` — public site URL in production (e.g. `https://yourdomain.com`)
 
+The nav **Sign in** link goes to **`/login`** (a normal App Router page). Google/Facebook still redirect back to **`/api/auth/callback/<provider>`** — those callback URLs are what you register in each provider’s console, not `/login`.
+
 **Google**
 
 1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), open **APIs & Services → Credentials**.
