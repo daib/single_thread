@@ -223,6 +223,65 @@ textarea {
   flex-direction: column;
 }
 
+.profile-chat-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  padding: 0.65rem 1rem;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.profile-chat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.profile-chat-select {
+  min-width: min(280px, 100%);
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-root);
+  color: var(--text);
+  font-size: 0.88rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.profile-chat-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.profile-chat-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.profile-chat-status,
+.profile-chat-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.profile-chat-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.profile-chat-link:hover {
+  text-decoration: underline;
+}
+
 .app-shell {
   display: flex;
   flex: 1;
@@ -339,6 +398,23 @@ textarea {
   margin: 0.2rem 0 0;
   font-size: 0.82rem;
   color: var(--text-muted);
+}
+
+.subtitle-profile {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.subtitle-handle {
+  font-family: ui-monospace, monospace;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.subtitle-sep {
+  margin: 0 0.35rem;
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
 .messages {

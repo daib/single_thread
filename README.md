@@ -124,7 +124,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-- **Chat** (`/`) — in-memory demo conversations (unchanged).
+- **Chat** (`/`) — pick a **profile** (signed-in users: profiles from Account; guests: “Guest”) to scope threads. Conversations are stored **in the browser** per profile (`localStorage`); switching profile switches the thread list.
 - **Account** (`/account`) — **one account per sign-in**; create it once (name + globally unique handle + optional bio), then add **profiles** (name, handle unique per account, optional bio); list is loaded from Postgres.
 
 Use a different port:
@@ -189,12 +189,14 @@ If the Next.js app ran **inside** Docker as well, the DB host in `DATABASE_URL` 
 | `src/app/layout.tsx` | Root layout + nav |
 | `src/app/page.tsx` | Chat home |
 | `src/app/globals.css` | Global styles |
-| `src/components/ChatApp.tsx` | Chat state and `sendMessage` |
+| `src/components/ChatApp.tsx` | Chat state, profile-scoped storage, `sendMessage` |
+| `src/components/ProfileChatSelect.tsx` | Profile picker on `/` |
+| `src/lib/chatStorage.ts` | `localStorage` for conversations per profile |
 | `docker-compose.yml` | Local Postgres + Letta |
 
 Imports can use the `@/*` alias (see `tsconfig.json` → `paths`).
 
 ## Behavior
 
-- **Chat:** data stays in React state; the demo still appends a fake assistant reply. Customize `sendMessage` in `src/components/ChatApp.tsx` for a real backend.
+- **Chat:** threads are keyed by **profile id** in the client (`src/lib/chatStorage.ts`). The profile strip uses `GET /api/account` when signed in. Customize `sendMessage` in `src/components/ChatApp.tsx` for a real backend.
 - **Account:** `accounts.user_id` matches the signed-in Auth.js user; each user sees and creates at most one account; profiles hang off that row. API and UI scope by `session.user.id`.

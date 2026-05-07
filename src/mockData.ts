@@ -3,7 +3,7 @@ import type { Conversation } from "./types";
 const iso = (minsAgo: number) =>
   new Date(Date.now() - minsAgo * 60_000).toISOString();
 
-export const initialConversations: Conversation[] = [
+const demoTemplate: Omit<Conversation, "profileId">[] = [
   {
     id: "c1",
     title: "Design sync",
@@ -71,3 +71,8 @@ export const initialConversations: Conversation[] = [
     ],
   },
 ];
+
+/** Demo threads for a profile; conversations are stored separately per `profileId` in the browser. */
+export function seedConversations(profileId: string): Conversation[] {
+  return demoTemplate.map((c) => ({ ...c, profileId }));
+}

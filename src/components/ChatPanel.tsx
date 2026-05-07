@@ -1,9 +1,10 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { formatClock } from "@/formatTime";
-import type { Conversation, Message } from "@/types";
+import type { ChatProfileOption, Conversation, Message } from "@/types";
 
 interface Props {
   conversation: Conversation | undefined;
+  activeProfile?: ChatProfileOption | null;
   onSend: (conversationId: string, body: string) => void;
 }
 
@@ -24,7 +25,7 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-export function ChatPanel({ conversation, onSend }: Props) {
+export function ChatPanel({ conversation, activeProfile, onSend }: Props) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +58,19 @@ export function ChatPanel({ conversation, onSend }: Props) {
       <header className="main-header">
         <div>
           <h1>{conversation.title}</h1>
-          <p className="subtitle">{conversation.messages.length} messages</p>
+          <p className="subtitle">
+            {activeProfile ? (
+              <>
+                <span className="subtitle-profile">
+                  {activeProfile.displayName} <span className="subtitle-handle">@{activeProfile.handle}</span>
+                </span>
+                <span className="subtitle-sep" aria-hidden>
+                  ·
+                </span>
+              </>
+            ) : null}
+            {conversation.messages.length} messages
+          </p>
         </div>
       </header>
       <div className="messages">
