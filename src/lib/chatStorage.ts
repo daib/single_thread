@@ -34,17 +34,34 @@ export function saveConversations(profileId: string, list: Conversation[]): void
   }
 }
 
-/** Load threads for this profile from storage, or seed demo data once per profile. */
+/**
+ * Load threads for this profile from storage, or seed demo data the first time this profile
+ * has no stored key. An intentionally empty list (`[]`) is kept — e.g. after deleting all chats.
+ */
 export function hydrateConversationsForProfile(profileId: string): Conversation[] {
   if (typeof window === "undefined") {
     return seedConversations(profileId);
   }
-  let list = loadConversations(profileId);
-  if (!list || list.length === 0) {
-    list = seedConversations(profileId);
+  const key = STORAGE_PREFIX + profileId;
+  const raw = localStorage.getItem(key);
+  if (raw === null) {
+    const list = seedConversations(profileId);
     saveConversations(profileId, list);
+    return list;
   }
-  return list;
+  try {
+    const data = JSON.parse(raw) as unknown;
+    if (!Array.isArray(data)) {
+      const list = seedConversations(profileId);
+      saveConversations(profileId, list);
+      return list;
+    }
+    return normalizeConversations(profileId, data as Conversation[]);
+  } catch {
+    const list = seedConversations(profileId);
+    saveConversations(profileId, list);
+    return list;
+  }
 }
 
 export function readSelectedProfileId(): string | null {

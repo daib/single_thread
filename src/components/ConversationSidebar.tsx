@@ -5,12 +5,14 @@ interface Props {
   conversations: Conversation[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export function ConversationSidebar({
   conversations,
   selectedId,
   onSelect,
+  onDelete,
 }: Props) {
   const sorted = [...conversations].sort(
     (a, b) =>
@@ -26,7 +28,7 @@ export function ConversationSidebar({
         {sorted.map((c) => {
           const active = c.id === selectedId;
           return (
-            <li key={c.id}>
+            <li key={c.id} className="conversation-row">
               <button
                 type="button"
                 id={c.id}
@@ -40,6 +42,18 @@ export function ConversationSidebar({
                 <div className="conversation-meta">
                   {formatRelativeTime(c.updatedAt)}
                 </div>
+              </button>
+              <button
+                type="button"
+                className="conversation-delete"
+                aria-label={`Delete chat “${c.title}”`}
+                title="Delete chat"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(c.id);
+                }}
+              >
+                Delete
               </button>
             </li>
           );

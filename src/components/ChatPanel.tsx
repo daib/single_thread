@@ -6,6 +6,7 @@ interface Props {
   conversation: Conversation | undefined;
   activeProfile?: ChatProfileOption | null;
   onSend: (conversationId: string, body: string) => void;
+  onDelete: (conversationId: string) => void;
 }
 
 function MessageBubble({ message }: { message: Message }) {
@@ -25,7 +26,7 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-export function ChatPanel({ conversation, activeProfile, onSend }: Props) {
+export function ChatPanel({ conversation, activeProfile, onSend, onDelete }: Props) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +73,13 @@ export function ChatPanel({ conversation, activeProfile, onSend }: Props) {
             {conversation.messages.length} messages
           </p>
         </div>
+        <button
+          type="button"
+          className="main-header-delete"
+          onClick={() => onDelete(conversation.id)}
+        >
+          Delete chat
+        </button>
       </header>
       <div className="messages">
         {conversation.messages.map((m) => (

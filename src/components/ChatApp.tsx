@@ -96,10 +96,22 @@ export function ChatApp() {
   }, [selectedProfileId]);
 
   useEffect(() => {
-    if (!selectedProfileId || conversations.length === 0) return;
-    if (!conversations.every((c) => c.profileId === selectedProfileId)) return;
+    if (!selectedProfileId) return;
+    if (conversations.length > 0 && !conversations.every((c) => c.profileId === selectedProfileId)) return;
     saveConversations(selectedProfileId, conversations);
   }, [selectedProfileId, conversations]);
+
+  useLayoutEffect(() => {
+    if (!selectedProfileId) return;
+    const forProfile = conversations.filter((c) => c.profileId === selectedProfileId);
+    if (forProfile.length === 0) {
+      setSelectedConvId(null);
+      return;
+    }
+    const ok = selectedConvId !== null && forProfile.some((c) => c.id === selectedConvId);
+    if (ok) return;
+    setSelectedConvId(forProfile[0]!.id);
+  }, [conversations, selectedProfileId, selectedConvId]);
 
   const conversationsForProfile = useMemo(
     () =>
@@ -175,6 +187,17 @@ export function ChatApp() {
     setSelectedProfileId(profileId);
   }, []);
 
+  const deleteConversation = useCallback(
+    (conversationId: string) => {
+      const pid = selectedProfileId;
+      if (!pid) return;
+      setConversations((prev) =>
+        prev.filter((c) => !(c.id === conversationId && c.profileId === pid)),
+      );
+    },
+    [selectedProfileId],
+  );
+
   const authLoading = status === "loading" || (status === "authenticated" && !profilesReady);
   const needsProfile =
     status === "authenticated" && profilesReady && profileList.length === 0;
@@ -209,11 +232,13 @@ export function ChatApp() {
             conversations={conversationsForProfile}
             selectedId={selectedConvId}
             onSelect={setSelectedConvId}
+            onDelete={deleteConversation}
           />
           <ChatPanel
             conversation={active}
             activeProfile={activeProfile}
             onSend={sendMessage}
+            onDelete={deleteConversation}
           />
         </div>
       )}
