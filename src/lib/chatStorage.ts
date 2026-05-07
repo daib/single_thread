@@ -1,4 +1,3 @@
-import { seedConversations } from "@/mockData";
 import type { Conversation } from "@/types";
 
 const STORAGE_PREFIX = "single-thread:chats:";
@@ -35,30 +34,30 @@ export function saveConversations(profileId: string, list: Conversation[]): void
 }
 
 /**
- * Load threads for this profile from storage, or seed demo data the first time this profile
- * has no stored key. An intentionally empty list (`[]`) is kept — e.g. after deleting all chats.
+ * Load threads for this profile from storage. First visit for a profile id stores `[]`
+ * (no demo threads). An intentionally empty list after deleting all chats is also `[]`.
  */
 export function hydrateConversationsForProfile(profileId: string): Conversation[] {
   if (typeof window === "undefined") {
-    return seedConversations(profileId);
+    return [];
   }
   const key = STORAGE_PREFIX + profileId;
   const raw = localStorage.getItem(key);
   if (raw === null) {
-    const list = seedConversations(profileId);
+    const list: Conversation[] = [];
     saveConversations(profileId, list);
     return list;
   }
   try {
     const data = JSON.parse(raw) as unknown;
     if (!Array.isArray(data)) {
-      const list = seedConversations(profileId);
+      const list: Conversation[] = [];
       saveConversations(profileId, list);
       return list;
     }
     return normalizeConversations(profileId, data as Conversation[]);
   } catch {
-    const list = seedConversations(profileId);
+    const list: Conversation[] = [];
     saveConversations(profileId, list);
     return list;
   }
