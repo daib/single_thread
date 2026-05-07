@@ -23,15 +23,46 @@ model AppAccount {
 
 /// Persona under an account; handle unique within that account.
 model AppProfile {
-  id          String     @id @default(uuid())
-  accountId   String     @map("account_id")
-  account     AppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  displayName String     @map("display_name")
-  handle      String
-  bio         String?
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id             String             @id @default(uuid())
+  accountId      String             @map("account_id")
+  account        AppAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  displayName    String             @map("display_name")
+  handle         String
+  bio            String?
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  conversations  ChatConversation[]
 
   @@unique([accountId, handle])
   @@map("profiles")
+}
+
+/// Chat thread for a profile (messages stored in `ChatMessage`).
+model ChatConversation {
+  id          String    @id @default(uuid())
+  profileId   String    @map("profile_id")
+  profile     AppProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title       String
+  preview     String    @default("")
+  branchOfId  String?   @map("branch_of_id")
+  parent      ChatConversation?  @relation("ConversationBranch", fields: [branchOfId], references: [id], onDelete: SetNull)
+  branches    ChatConversation[] @relation("ConversationBranch")
+  messages    ChatMessage[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([profileId])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String           @id @default(uuid())
+  conversationId String           @map("conversation_id")
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  body           String
+  sentAt         DateTime         @default(now()) @map("sent_at")
+
+  @@index([conversationId])
+  @@map("chat_messages")
 }

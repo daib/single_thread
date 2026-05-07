@@ -124,7 +124,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-- **Chat** (`/`) — pick a **profile** (signed-in users: profiles from Account; guests: “Guest”) to scope threads. Conversations are stored **in the browser** per profile (`localStorage`); switching profile switches the thread list.
+- **Chat** (`/`) — pick a **profile** (signed-in users: profiles from Account; guests: “Guest”) to scope threads. **Signed-in:** conversations and messages are stored in **Postgres** (`chat_conversations`, `chat_messages`) per profile. **Guest / signed-out:** same UI uses **`localStorage`** per profile id (`src/lib/chatStorage.ts`).
 - **Account** (`/account`) — **one account per sign-in**; create it once (name + globally unique handle + optional bio), then add **profiles** (name, handle unique per account, optional bio); list is loaded from Postgres.
 
 Use a different port:
@@ -149,6 +149,10 @@ Ensure `DATABASE_URL` is set in the environment and migrations have been applied
 | `GET` | `/api/account` | The **current user’s** account (0 or 1 row) with nested `profiles`, or `[]` if none yet |
 | `POST` | `/api/account` | JSON: `{ "displayName", "handle", "bio?" }`. Stores the row for `session.user.id` (JWT `sub`). **409** if you already have an account. `handle` globally unique; `bio` optional, max 2000 chars |
 | `POST` | `/api/account/:accountId/profiles` | JSON: `{ "displayName", "handle", "bio?" }`. **404** if `:accountId` is not yours. Profile `handle` unique within that account |
+| `GET` | `/api/profile/:profileId/conversations` | All chats for that profile (nested messages). **401** / **404** if profile not yours |
+| `POST` | `/api/profile/:profileId/conversations` | New thread: `{}` or `{ "title", "preview" }`. **Branch:** `{ "mode": "branch", "fromConversationId" }` copies messages from that thread (same profile) |
+| `DELETE` | `/api/conversations/:conversationId` | Delete thread and its messages if you own the profile |
+| `POST` | `/api/conversations/:conversationId/messages` | JSON: `{ "role": "user" \| "assistant", "body" }` — append message; returns updated conversation |
 
 ## Docker Compose (optional)
 
@@ -174,7 +178,7 @@ If the Next.js app ran **inside** Docker as well, the DB host in `DATABASE_URL` 
 | Path | Purpose |
 |------|---------|
 | `scripts/init-db.sh` | Create DB + app role + run `prisma migrate deploy` (`npm run db:init`) |
-| `prisma/schema.prisma` | `AppAccount` (`user_id` unique → one per Auth user), `AppProfile` → `profiles` |
+| `prisma/schema.prisma` | `AppAccount`, `AppProfile`; `ChatConversation` / `ChatMessage` for persisted chats |
 | `prisma/migrations/` | SQL migrations (historical rename + nested `profiles`) |
 | `src/lib/prisma.ts` | Shared `PrismaClient` instance |
 | `src/app/api/account/route.ts` | Account list + create |
@@ -189,14 +193,18 @@ If the Next.js app ran **inside** Docker as well, the DB host in `DATABASE_URL` 
 | `src/app/layout.tsx` | Root layout + nav |
 | `src/app/page.tsx` | Chat home |
 | `src/app/globals.css` | Global styles |
-| `src/components/ChatApp.tsx` | Chat state, profile-scoped storage, `sendMessage` |
-| `src/components/ProfileChatSelect.tsx` | Profile picker on `/` |
-| `src/lib/chatStorage.ts` | `localStorage` for conversations per profile |
+| `src/app/api/profile/[profileId]/conversations/route.ts` | List / create (or branch) conversations for a profile |
+| `src/app/api/conversations/[conversationId]/route.ts` | Delete conversation |
+| `src/app/api/conversations/[conversationId]/messages/route.ts` | Append message |
+| `src/lib/mapChatConversation.ts` | Map DB rows to client `Conversation` type |
+| `src/lib/profileAccess.ts` | Verify profile / conversation ownership by `session.user.id` |
+| `src/components/ChatApp.tsx` | Chat UI; uses API when signed in, `localStorage` for guest |
+| `src/lib/chatStorage.ts` | Guest-only `localStorage` for conversations |
 | `docker-compose.yml` | Local Postgres + Letta |
 
 Imports can use the `@/*` alias (see `tsconfig.json` → `paths`).
 
 ## Behavior
 
-- **Chat:** threads are keyed by **profile id** in the client (`src/lib/chatStorage.ts`). The profile strip uses `GET /api/account` when signed in. Customize `sendMessage` in `src/components/ChatApp.tsx` for a real backend.
+- **Chat:** signed-in users persist threads in Postgres via the REST routes above; guests keep data only in the browser. Customize assistant behavior in `src/components/ChatApp.tsx` and the messages API as needed.
 - **Account:** `accounts.user_id` matches the signed-in Auth.js user; each user sees and creates at most one account; profiles hang off that row. API and UI scope by `session.user.id`.

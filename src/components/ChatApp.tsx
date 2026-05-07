@@ -26,6 +26,7 @@ export function ChatApp() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
 
   useEffect(() => {
     if (status === "loading") {
@@ -82,24 +83,69 @@ export function ChatApp() {
     setSelectedProfileId((prev) => (prev === next ? prev : next));
   }, [profilesReady, profileList]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
+    if (status === "loading") return;
+
     if (!selectedProfileId) {
       setConversations([]);
       setSelectedConvId(null);
+      setConversationsLoading(false);
       return;
     }
-    const list = hydrateConversationsForProfile(selectedProfileId);
-    setConversations(list);
-    setSelectedConvId((prev) =>
-      prev && list.some((c) => c.id === prev) ? prev : (list[0]?.id ?? null),
-    );
-  }, [selectedProfileId]);
+
+    const isGuest =
+      status === "unauthenticated" || selectedProfileId === GUEST_PROFILE_ID;
+
+    if (isGuest) {
+      setConversationsLoading(false);
+      const list = hydrateConversationsForProfile(selectedProfileId);
+      setConversations(list);
+      setSelectedConvId((prev) =>
+        prev && list.some((c) => c.id === prev) ? prev : (list[0]?.id ?? null),
+      );
+      return;
+    }
+
+    let cancelled = false;
+    setConversationsLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/profile/${encodeURIComponent(selectedProfileId)}/conversations`,
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          setConversations([]);
+          setSelectedConvId(null);
+          return;
+        }
+        const list = (await res.json()) as Conversation[];
+        setConversations(list);
+        setSelectedConvId((prev) =>
+          prev && list.some((c) => c.id === prev) ? prev : (list[0]?.id ?? null),
+        );
+      } finally {
+        if (!cancelled) setConversationsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProfileId, status]);
 
   useEffect(() => {
     if (!selectedProfileId) return;
-    if (conversations.length > 0 && !conversations.every((c) => c.profileId === selectedProfileId)) return;
+    const isGuest =
+      status === "unauthenticated" || selectedProfileId === GUEST_PROFILE_ID;
+    if (!isGuest) return;
+    if (
+      conversations.length > 0 &&
+      !conversations.every((c) => c.profileId === selectedProfileId)
+    )
+      return;
     saveConversations(selectedProfileId, conversations);
-  }, [selectedProfileId, conversations]);
+  }, [selectedProfileId, conversations, status]);
 
   useLayoutEffect(() => {
     if (!selectedProfileId) return;
@@ -131,10 +177,58 @@ export function ChatApp() {
     [conversationsForProfile, selectedConvId],
   );
 
+  const useServerChats =
+    status === "authenticated" &&
+    selectedProfileId != null &&
+    selectedProfileId !== GUEST_PROFILE_ID;
+
   const sendMessage = useCallback(
-    (conversationId: string, body: string) => {
+    async (conversationId: string, body: string) => {
       const profileAtSend = selectedProfileId;
       if (!profileAtSend) return;
+
+      if (useServerChats) {
+        try {
+          const res = await fetch(
+            `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ role: "user", body }),
+            },
+          );
+          const data = (await res.json()) as { conversation?: Conversation; error?: string };
+          if (!res.ok) return;
+          if (data.conversation) {
+            setConversations((prev) =>
+              prev.map((c) => (c.id === conversationId ? data.conversation! : c)),
+            );
+          }
+          window.setTimeout(async () => {
+            const res2 = await fetch(
+              `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  role: "assistant",
+                  body: "This is a local demo reply — wire your API here.",
+                }),
+              },
+            );
+            const data2 = (await res2.json()) as { conversation?: Conversation };
+            if (res2.ok && data2.conversation) {
+              setConversations((prev) =>
+                prev.map((c) => (c.id === conversationId ? data2.conversation! : c)),
+              );
+            }
+          }, 600);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
       const now = new Date().toISOString();
       const userMsg: Message = {
         id: nextId("m"),
@@ -151,8 +245,7 @@ export function ChatApp() {
           const trimmed = body.trim();
           let title = c.title;
           if (wasEmpty && c.title === "New chat" && trimmed.length > 0) {
-            title =
-              trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
+            title = trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
           }
           return {
             ...c,
@@ -165,6 +258,7 @@ export function ChatApp() {
         }),
       );
 
+      const profileForReply = profileAtSend;
       window.setTimeout(() => {
         const reply: Message = {
           id: nextId("m"),
@@ -174,11 +268,11 @@ export function ChatApp() {
         };
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
+            if (c.id !== conversationId || c.profileId !== profileForReply) return c;
             const messages = [...c.messages, reply];
             return {
               ...c,
-              profileId: profileAtSend,
+              profileId: profileForReply,
               messages,
               preview: reply.body,
               updatedAt: reply.sentAt,
@@ -187,7 +281,7 @@ export function ChatApp() {
         );
       }, 600);
     },
-    [selectedProfileId],
+    [selectedProfileId, useServerChats],
   );
 
   const onProfileChange = useCallback((profileId: string) => {
@@ -196,19 +290,45 @@ export function ChatApp() {
   }, []);
 
   const deleteConversation = useCallback(
-    (conversationId: string) => {
+    async (conversationId: string) => {
       const pid = selectedProfileId;
       if (!pid) return;
+
+      if (useServerChats) {
+        const res = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}`, {
+          method: "DELETE",
+        });
+        if (!res.ok && res.status !== 204) return;
+        setConversations((prev) =>
+          prev.filter((c) => !(c.id === conversationId && c.profileId === pid)),
+        );
+        return;
+      }
+
       setConversations((prev) =>
         prev.filter((c) => !(c.id === conversationId && c.profileId === pid)),
       );
     },
-    [selectedProfileId],
+    [selectedProfileId, useServerChats],
   );
 
-  const createNewChat = useCallback(() => {
+  const createNewChat = useCallback(async () => {
     const pid = selectedProfileId;
     if (!pid) return;
+
+    if (useServerChats) {
+      const res = await fetch(`/api/profile/${encodeURIComponent(pid)}/conversations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = (await res.json()) as Conversation;
+      if (!res.ok) return;
+      setConversations((prev) => [...prev, data]);
+      setSelectedConvId(data.id);
+      return;
+    }
+
     const now = new Date().toISOString();
     const id = nextId("c");
     const newConv: Conversation = {
@@ -221,12 +341,29 @@ export function ChatApp() {
     };
     setConversations((prev) => [...prev, newConv]);
     setSelectedConvId(id);
-  }, [selectedProfileId]);
+  }, [selectedProfileId, useServerChats]);
 
   const branchConversation = useCallback(
-    (conversationId: string) => {
+    async (conversationId: string) => {
       const pid = selectedProfileId;
       if (!pid) return;
+
+      if (useServerChats) {
+        const res = await fetch(`/api/profile/${encodeURIComponent(pid)}/conversations`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "branch",
+            fromConversationId: conversationId,
+          }),
+        });
+        const data = (await res.json()) as Conversation;
+        if (!res.ok) return;
+        setConversations((prev) => [...prev, data]);
+        setSelectedConvId(data.id);
+        return;
+      }
+
       const source = conversations.find(
         (c) => c.id === conversationId && c.profileId === pid,
       );
@@ -251,12 +388,14 @@ export function ChatApp() {
       setConversations((prev) => [...prev, branched]);
       setSelectedConvId(id);
     },
-    [selectedProfileId, conversations],
+    [selectedProfileId, useServerChats, conversations],
   );
 
   const authLoading = status === "loading" || (status === "authenticated" && !profilesReady);
   const needsProfile =
     status === "authenticated" && profilesReady && profileList.length === 0;
+  const chatsLoading =
+    useServerChats && conversationsLoading && selectedProfileId != null;
 
   return (
     <div className="chat-root">
@@ -277,9 +416,14 @@ export function ChatApp() {
         <div className="app-shell">
           <main className="main">
             <div className="empty-state">
-              Add a profile under Account to start chatting as that persona. Each profile keeps its own
-              conversations in this browser.
+              Add a profile under Account to start chatting as that persona.
             </div>
+          </main>
+        </div>
+      ) : chatsLoading ? (
+        <div className="app-shell">
+          <main className="main">
+            <div className="empty-state">Loading conversations…</div>
           </main>
         </div>
       ) : (
