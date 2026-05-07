@@ -146,10 +146,18 @@ export function ChatApp() {
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
+          const wasEmpty = c.messages.length === 0;
           const messages = [...c.messages, userMsg];
+          const trimmed = body.trim();
+          let title = c.title;
+          if (wasEmpty && c.title === "New chat" && trimmed.length > 0) {
+            title =
+              trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
+          }
           return {
             ...c,
             profileId: profileAtSend,
+            title,
             messages,
             preview: body,
             updatedAt: now,
@@ -198,6 +206,23 @@ export function ChatApp() {
     [selectedProfileId],
   );
 
+  const createNewChat = useCallback(() => {
+    const pid = selectedProfileId;
+    if (!pid) return;
+    const now = new Date().toISOString();
+    const id = nextId("c");
+    const newConv: Conversation = {
+      id,
+      profileId: pid,
+      title: "New chat",
+      preview: "No messages yet",
+      updatedAt: now,
+      messages: [],
+    };
+    setConversations((prev) => [...prev, newConv]);
+    setSelectedConvId(id);
+  }, [selectedProfileId]);
+
   const authLoading = status === "loading" || (status === "authenticated" && !profilesReady);
   const needsProfile =
     status === "authenticated" && profilesReady && profileList.length === 0;
@@ -233,6 +258,7 @@ export function ChatApp() {
             selectedId={selectedConvId}
             onSelect={setSelectedConvId}
             onDelete={deleteConversation}
+            onNewChat={createNewChat}
           />
           <ChatPanel
             conversation={active}

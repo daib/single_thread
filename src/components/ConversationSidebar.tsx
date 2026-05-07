@@ -7,6 +7,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onNewChat: () => void;
 }
 
 export function ConversationSidebar({
@@ -14,6 +15,7 @@ export function ConversationSidebar({
   selectedId,
   onSelect,
   onDelete,
+  onNewChat,
 }: Props) {
   const sorted = [...conversations].sort(
     (a, b) =>
@@ -24,6 +26,9 @@ export function ConversationSidebar({
     <aside className="sidebar" aria-label="Conversations">
       <div className="sidebar-header">
         <h2 className="sidebar-title">Conversations</h2>
+        <button type="button" className="sidebar-new-chat" onClick={onNewChat}>
+          New chat
+        </button>
       </div>
       <ul className="conversation-list" role="listbox" aria-activedescendant={selectedId ?? undefined}>
         {sorted.map((c) => {

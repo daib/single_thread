@@ -81,6 +81,9 @@ export function ChatPanel({ conversation, activeProfile, onSend, onDelete }: Pro
         />
       </header>
       <div className="messages">
+        {conversation.messages.length === 0 ? (
+          <p className="messages-empty-hint">Send a message below to start this chat.</p>
+        ) : null}
         {conversation.messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
