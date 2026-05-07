@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { ChatMoreMenu } from "@/components/ChatMoreMenu";
 import { formatClock } from "@/formatTime";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
 
@@ -73,13 +74,11 @@ export function ChatPanel({ conversation, activeProfile, onSend, onDelete }: Pro
             {conversation.messages.length} messages
           </p>
         </div>
-        <button
-          type="button"
-          className="main-header-delete"
-          onClick={() => onDelete(conversation.id)}
-        >
-          Delete chat
-        </button>
+        <ChatMoreMenu
+          conversationLabel={conversation.title}
+          variant="header"
+          onDelete={() => onDelete(conversation.id)}
+        />
       </header>
       <div className="messages">
         {conversation.messages.map((m) => (

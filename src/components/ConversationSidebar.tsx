@@ -1,3 +1,4 @@
+import { ChatMoreMenu } from "@/components/ChatMoreMenu";
 import { formatRelativeTime } from "@/formatTime";
 import type { Conversation } from "@/types";
 
@@ -43,18 +44,11 @@ export function ConversationSidebar({
                   {formatRelativeTime(c.updatedAt)}
                 </div>
               </button>
-              <button
-                type="button"
-                className="conversation-delete"
-                aria-label={`Delete chat “${c.title}”`}
-                title="Delete chat"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(c.id);
-                }}
-              >
-                Delete
-              </button>
+              <ChatMoreMenu
+                conversationLabel={c.title}
+                variant="sidebar"
+                onDelete={() => onDelete(c.id)}
+              />
             </li>
           );
         })}
