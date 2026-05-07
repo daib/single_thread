@@ -13,7 +13,7 @@ export default async function ProfilesPage() {
     });
   } catch {
     loadError =
-      "Could not load profiles. Set DATABASE_URL, run the SQL migration (see README), and ensure Postgres is running (e.g. docker compose up -d).";
+      "Could not load profiles. Set DATABASE_URL, run the SQL migration (see README), and ensure Postgres is running (e.g. docker-compose up -d).";
   }
 
   return (

@@ -9,6 +9,7 @@
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:init": "bash scripts/init-db.sh",
     "db:studio": "prisma studio"
   },
   "dependencies": {
