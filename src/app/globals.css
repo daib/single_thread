@@ -69,6 +69,14 @@ body {
   color: var(--accent);
 }
 
+.app-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .app-nav-links {
   display: flex;
   gap: 0.5rem;
@@ -86,6 +94,77 @@ body {
 .app-nav-link:hover {
   color: var(--text);
   background: var(--bg-hover);
+}
+
+.app-nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-nav-auth-muted {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.app-nav-auth-name {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-nav-avatar {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.app-nav-auth-btn {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-root);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.app-nav-auth-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.app-nav-auth-btn-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: #0a0c0f;
+}
+
+.app-nav-auth-btn-primary:hover {
+  filter: brightness(1.06);
+  border-color: transparent;
+}
+
+.app-nav-auth-signin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.app-nav-auth-btn-facebook {
+  border-color: #2d4373;
+  background: #1877f2;
+  color: #fff;
+}
+
+.app-nav-auth-btn-facebook:hover {
+  filter: brightness(1.08);
+  border-color: #2d4373;
 }
 
 button,

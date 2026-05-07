@@ -1,8 +1,17 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
+
+async function requireSession() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  }
+  return null;
+}
 
 const HANDLE_RE = /^[a-z0-9][a-z0-9_-]{1,30}$/;
 
@@ -19,6 +28,9 @@ function parseBody(body: unknown): { displayName: string; handle: string; bio: s
 }
 
 export async function GET() {
+  const unauthorized = await requireSession();
+  if (unauthorized) return unauthorized;
+
   try {
     const profiles = await prisma.profile.findMany({
       orderBy: { createdAt: "desc" },
@@ -34,6 +46,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = await requireSession();
+  if (unauthorized) return unauthorized;
+
   let json: unknown;
   try {
     json = await request.json();

@@ -2,7 +2,7 @@
 
 TypeScript + React + **Next.js** (App Router) UI: a sidebar to choose a conversation, a main pane for the thread, and a message composer. **Profiles** can be created and stored in **Postgres** via Prisma.
 
-**Stack:** Next.js 15, React 19, Prisma, PostgreSQL.
+**Stack:** Next.js 15, React 19, Prisma, PostgreSQL, [Auth.js](https://authjs.dev) (Google + optional Facebook).
 
 ## Prerequisites
 
@@ -32,6 +32,39 @@ npm install
 2. Adjust `DATABASE_URL` if your Postgres host, port, user, password, or database name differ.
 
 The default in `.env.example` matches `docker-compose.yml` (`database` **singlethread**, user **postgres**, password **postgres**, port **5432**, host **127.0.0.1** so Prisma and Next hit Docker on macOS instead of `localhost` → `::1`).
+
+### Sign-in (Auth.js): Google and optional Facebook
+
+Shared:
+
+- `AUTH_SECRET` — random string, e.g. `openssl rand -base64 32`
+- Optional: `AUTH_URL` — public site URL in production (e.g. `https://yourdomain.com`)
+
+**Google**
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), open **APIs & Services → Credentials**.
+2. Create or select an **OAuth 2.0 Client ID** with type **Web application**.
+3. Under **Authorized JavaScript origins**, add `http://localhost:3000` (no path; use `https://yourdomain.com` in production).
+4. Under **Authorized redirect URIs**, click **Add URI** and paste **exactly** (Google compares character-for-character):
+
+   ```text
+   http://localhost:3000/api/auth/callback/google
+   ```
+
+   If your app runs on another port, change `3000` to match (e.g. `http://localhost:4000/api/auth/callback/google`) and use that same value here.
+
+5. Save, wait a minute, then try **Sign in** again.
+6. Set `AUTH_GOOGLE_ID` (Client ID) and `AUTH_GOOGLE_SECRET` (Client secret) in `.env` from this credential.
+
+If Google shows *“register the redirect URI”* with `redirect_uri=http://localhost:3000/api/auth/callback/google`, that URI is missing or mistyped in **Authorized redirect URIs** (wrong port, `https` vs `http`, or an extra slash). It must match the URL Auth.js sends, which is always `/api/auth/callback/google` under your site origin.
+
+**Facebook (optional)**
+
+1. In [Meta for Developers](https://developers.facebook.com/apps/), create an app and add the **Facebook Login** product.
+2. Under **Facebook Login → Settings**, set **Valid OAuth Redirect URIs** to `http://localhost:3000/api/auth/callback/facebook` (and your production callback URL).
+3. Set `AUTH_FACEBOOK_ID` (App ID) and `AUTH_FACEBOOK_SECRET` (App secret) in `.env`. If either is empty, the Facebook button is hidden and the provider is not registered.
+
+Chat (`/`) is public. **Profiles** (`/profiles`) and **`GET` / `POST` `/api/profiles`** require a signed-in user (Google or Facebook).
 
 ## Database (Postgres)
 
@@ -144,7 +177,10 @@ If the Next.js app ran **inside** Docker as well, the DB host in `DATABASE_URL` 
 | `src/app/api/profiles/route.ts` | Profiles REST API |
 | `src/app/profiles/page.tsx` | Profiles UI (server-rendered list) |
 | `src/components/ProfileCreateForm.tsx` | Create-profile form (client) |
-| `src/components/AppNav.tsx` | Top nav: Chat / Profiles |
+| `src/auth.ts` | Auth.js config (Google provider, `authorized` callback) |
+| `src/middleware.ts` | Requires sign-in for `/profiles` |
+| `src/app/api/auth/[...nextauth]/route.ts` | Auth.js route handlers |
+| `src/components/AppNav.tsx` | Top nav: Chat / Profiles / Google sign-in |
 | `src/app/layout.tsx` | Root layout + nav |
 | `src/app/page.tsx` | Chat home |
 | `src/app/globals.css` | Global styles |

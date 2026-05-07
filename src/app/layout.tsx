@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { DM_Sans } from "next/font/google";
 import { AppNav } from "@/components/AppNav";
+import { AuthSessionProvider } from "@/components/AuthSessionProvider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -23,8 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={dmSans.variable}>
       <body>
-        <AppNav />
-        <div className="app-main">{children}</div>
+        <AuthSessionProvider>
+          <AppNav />
+          <div className="app-main">{children}</div>
+        </AuthSessionProvider>
       </body>
     </html>
   );
