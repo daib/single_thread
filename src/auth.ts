@@ -17,7 +17,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
-      if (pathname.startsWith("/profiles")) {
+      if (pathname.startsWith("/account")) {
         return !!auth?.user;
       }
       return true;

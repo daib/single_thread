@@ -7,7 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Profile {
+/// Stored account rows (display name, handle, bio). Prisma model name avoids clashing with Auth.js "Account".
+model AppAccount {
   id          String   @id @default(uuid())
   handle      String   @unique
   displayName String   @map("display_name")
@@ -15,5 +16,5 @@ model Profile {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@map("profiles")
+  @@map("accounts")
 }

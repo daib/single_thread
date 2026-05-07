@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { type FormEvent, useState } from "react";
 
-export function ProfileCreateForm() {
+export function AccountCreateForm() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [handle, setHandle] = useState("");
@@ -16,7 +17,7 @@ export function ProfileCreateForm() {
     setError(null);
     setPending(true);
     try {
-      const res = await fetch("/api/profiles", {
+      const res = await fetch("/api/account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -42,13 +43,13 @@ export function ProfileCreateForm() {
   }
 
   return (
-    <section className="profiles-card" aria-labelledby="create-profile-heading">
-      <h2 id="create-profile-heading" className="profiles-card-title">
-        New profile
+    <section className="account-card" aria-labelledby="create-account-heading">
+      <h2 id="create-account-heading" className="account-card-title">
+        New account
       </h2>
-      <form className="profiles-form" onSubmit={onSubmit}>
-        <label className="profiles-field">
-          <span className="profiles-label">Display name</span>
+      <form className="account-form" onSubmit={onSubmit}>
+        <label className="account-field">
+          <span className="account-label">Display name</span>
           <input
             name="displayName"
             type="text"
@@ -60,8 +61,8 @@ export function ProfileCreateForm() {
             placeholder="Ada Lovelace"
           />
         </label>
-        <label className="profiles-field">
-          <span className="profiles-label">Handle</span>
+        <label className="account-field">
+          <span className="account-label">Handle</span>
           <input
             name="handle"
             type="text"
@@ -74,10 +75,10 @@ export function ProfileCreateForm() {
             pattern="[a-z0-9][a-z0-9_-]{1,30}"
             title="2–31 chars: lowercase letters, digits, underscore, hyphen"
           />
-          <span className="profiles-hint">Unique. Lowercase, e.g. ada_lovelace</span>
+          <span className="account-hint">Unique. Lowercase, e.g. ada_lovelace</span>
         </label>
-        <label className="profiles-field">
-          <span className="profiles-label">Bio (optional)</span>
+        <label className="account-field">
+          <span className="account-label">Bio (optional)</span>
           <textarea
             name="bio"
             rows={3}
@@ -88,12 +89,19 @@ export function ProfileCreateForm() {
           />
         </label>
         {error ? (
-          <p className="profiles-form-error" role="alert">
+          <p className="account-form-error" role="alert">
             {error}
           </p>
         ) : null}
-        <button type="submit" className="profiles-submit" disabled={pending}>
-          {pending ? "Saving…" : "Create profile"}
+        <button type="submit" className="account-submit" disabled={pending}>
+          {pending ? "Saving…" : "Create account"}
+        </button>
+        <button
+          type="button"
+          className="account-signout"
+          onClick={() => signOut({ callbackUrl: "/" })}
+        >
+          Sign out
         </button>
       </form>
     </section>

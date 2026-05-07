@@ -210,23 +210,6 @@ body {
   flex-shrink: 0;
 }
 
-.app-nav-auth-btn {
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg-root);
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.app-nav-auth-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--text-muted);
-}
-
 button,
 input,
 textarea {
@@ -487,7 +470,7 @@ textarea {
   padding: 2rem;
 }
 
-.profiles-page {
+.account-page {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -497,36 +480,36 @@ textarea {
   margin: 0 auto;
 }
 
-.profiles-header {
+.account-header {
   margin-bottom: 1.25rem;
 }
 
-.profiles-page-title {
+.account-page-title {
   margin: 0;
   font-size: 1.35rem;
   font-weight: 600;
 }
 
-.profiles-page-subtitle {
+.account-page-subtitle {
   margin: 0.35rem 0 0;
   color: var(--text-muted);
   font-size: 0.92rem;
 }
 
-.profiles-layout {
+.account-layout {
   display: grid;
   gap: 1.25rem;
   grid-template-columns: minmax(0, 1fr);
 }
 
 @media (min-width: 800px) {
-  .profiles-layout {
+  .account-layout {
     grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
     align-items: start;
   }
 }
 
-.profiles-card {
+.account-card {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -534,7 +517,7 @@ textarea {
   box-shadow: var(--shadow);
 }
 
-.profiles-card-title {
+.account-card-title {
   margin: 0 0 0.85rem;
   font-size: 0.85rem;
   font-weight: 600;
@@ -543,26 +526,26 @@ textarea {
   color: var(--text-muted);
 }
 
-.profiles-form {
+.account-form {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
 }
 
-.profiles-field {
+.account-field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
 
-.profiles-label {
+.account-label {
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--text-muted);
 }
 
-.profiles-field input,
-.profiles-field textarea {
+.account-field input,
+.account-field textarea {
   padding: 0.55rem 0.7rem;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -572,24 +555,24 @@ textarea {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.profiles-field input:focus,
-.profiles-field textarea:focus {
+.account-field input:focus,
+.account-field textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.profiles-hint {
+.account-hint {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.profiles-form-error {
+.account-form-error {
   margin: 0;
   font-size: 0.85rem;
   color: #fca5a5;
 }
 
-.profiles-submit {
+.account-submit {
   align-self: flex-start;
   padding: 0.55rem 1.1rem;
   border-radius: 10px;
@@ -600,12 +583,32 @@ textarea {
   cursor: pointer;
 }
 
-.profiles-submit:disabled {
+.account-submit:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.profiles-list {
+.account-signout {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-root);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.account-signout:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.account-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -614,44 +617,44 @@ textarea {
   gap: 0.65rem;
 }
 
-.profiles-list-empty {
+.account-list-empty {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.92rem;
 }
 
-.profiles-list-item {
+.account-list-item {
   padding: 0.75rem 0.85rem;
   border-radius: 10px;
   background: var(--bg-root);
   border: 1px solid var(--border);
 }
 
-.profiles-list-main {
+.account-list-main {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.35rem 0.65rem;
 }
 
-.profiles-list-name {
+.account-list-name {
   font-weight: 600;
 }
 
-.profiles-list-handle {
+.account-list-handle {
   font-size: 0.85rem;
   color: var(--accent);
   font-family: ui-monospace, monospace;
 }
 
-.profiles-list-bio {
+.account-list-bio {
   margin: 0.45rem 0 0;
   font-size: 0.88rem;
   color: var(--text-muted);
   white-space: pre-wrap;
 }
 
-.profiles-list-meta {
+.account-list-meta {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.72rem;

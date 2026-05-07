@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 export function NavAuth() {
   const { data: session, status } = useSession();
@@ -25,8 +25,8 @@ export function NavAuth() {
 
   return (
     <div className="app-nav-auth">
-      <Link href="/profiles" className="app-nav-link">
-        Profiles
+      <Link href="/account" className="app-nav-link">
+        Account
       </Link>
       {session.user.image ? (
         <Image
@@ -41,9 +41,6 @@ export function NavAuth() {
       <span className="app-nav-auth-name" title={session.user.email ?? undefined}>
         {session.user.name ?? session.user.email ?? "Signed in"}
       </span>
-      <button type="button" className="app-nav-auth-btn" onClick={() => signOut({ callbackUrl: "/" })}>
-        Sign out
-      </button>
     </div>
   );
 }

@@ -32,10 +32,10 @@ export async function GET() {
   if (unauthorized) return unauthorized;
 
   try {
-    const profiles = await prisma.profile.findMany({
+    const accounts = await prisma.appAccount.findMany({
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(profiles);
+    return NextResponse.json(accounts);
   } catch (e) {
     console.error(e);
     return NextResponse.json(
@@ -68,21 +68,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    const profile = await prisma.profile.create({
+    const account = await prisma.appAccount.create({
       data: {
         displayName: parsed.displayName,
         handle: parsed.handle,
         bio: parsed.bio,
       },
     });
-    return NextResponse.json(profile, { status: 201 });
+    return NextResponse.json(account, { status: 201 });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return NextResponse.json({ error: "That handle is already taken." }, { status: 409 });
     }
     console.error(e);
     return NextResponse.json(
-      { error: "Could not create profile. Is the database running and migrated?" },
+      { error: "Could not create account. Is the database running and migrated?" },
       { status: 503 },
     );
   }

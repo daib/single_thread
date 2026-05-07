@@ -1,6 +1,6 @@
 # Single-thread chat
 
-TypeScript + React + **Next.js** (App Router) UI: a sidebar to choose a conversation, a main pane for the thread, and a message composer. **Profiles** can be created and stored in **Postgres** via Prisma.
+TypeScript + React + **Next.js** (App Router) UI: a sidebar to choose a conversation, a main pane for the thread, and a message composer. **Account** records (display name, handle, bio) can be created and stored in **Postgres** via Prisma.
 
 **Stack:** Next.js 15, React 19, Prisma, PostgreSQL, [Auth.js](https://authjs.dev) (Google + optional Facebook).
 
@@ -66,7 +66,7 @@ If Google shows *“register the redirect URI”* with `redirect_uri=http://loca
 2. Under **Facebook Login → Settings**, set **Valid OAuth Redirect URIs** to `http://localhost:3000/api/auth/callback/facebook` (and your production callback URL).
 3. Set `AUTH_FACEBOOK_ID` (App ID) and `AUTH_FACEBOOK_SECRET` (App secret) in `.env`. If either is empty, the Facebook button is hidden and the provider is not registered.
 
-Chat (`/`) is public. **Profiles** (`/profiles`) and **`GET` / `POST` `/api/profiles`** require a signed-in user (Google or Facebook).
+Chat (`/`) is public. **Account** (`/account`) and **`GET` / `POST` `/api/account`** require a signed-in user (Google or Facebook).
 
 ## Database (Postgres)
 
@@ -125,7 +125,7 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 - **Chat** (`/`) — in-memory demo conversations (unchanged).
-- **Profiles** (`/profiles`) — create profiles (display name, unique handle, optional bio); list is loaded from Postgres.
+- **Account** (`/account`) — create account rows (display name, unique handle, optional bio); list is loaded from Postgres.
 
 Use a different port:
 
@@ -146,8 +146,8 @@ Ensure `DATABASE_URL` is set in the environment and migrations have been applied
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/profiles` | JSON list of profiles (newest first) |
-| `POST` | `/api/profiles` | JSON body: `{ "displayName", "handle", "bio?" }`. `handle`: 2–31 chars, lowercase `a-z`, digits, `_`, `-` |
+| `GET` | `/api/account` | JSON list of accounts (newest first) |
+| `POST` | `/api/account` | JSON body: `{ "displayName", "handle", "bio?" }`. `handle`: 2–31 chars, lowercase `a-z`, digits, `_`, `-` |
 
 ## Docker Compose (optional)
 
@@ -173,16 +173,16 @@ If the Next.js app ran **inside** Docker as well, the DB host in `DATABASE_URL` 
 | Path | Purpose |
 |------|---------|
 | `scripts/init-db.sh` | Create DB + app role + run `prisma migrate deploy` (`npm run db:init`) |
-| `prisma/schema.prisma` | `Profile` model |
-| `prisma/migrations/` | SQL migrations |
+| `prisma/schema.prisma` | `AppAccount` model → `accounts` table |
+| `prisma/migrations/` | SQL migrations (includes `profiles` → `accounts` rename) |
 | `src/lib/prisma.ts` | Shared `PrismaClient` instance |
-| `src/app/api/profiles/route.ts` | Profiles REST API |
-| `src/app/profiles/page.tsx` | Profiles UI (server-rendered list) |
-| `src/components/ProfileCreateForm.tsx` | Create-profile form (client) |
+| `src/app/api/account/route.ts` | Account REST API |
+| `src/app/account/page.tsx` | Account UI (server-rendered list) |
+| `src/components/AccountCreateForm.tsx` | Create-account form (client) |
 | `src/auth.ts` | Auth.js config (Google provider, `authorized` callback) |
-| `src/middleware.ts` | Requires sign-in for `/profiles` |
+| `src/middleware.ts` | Requires sign-in for `/account` |
 | `src/app/api/auth/[...nextauth]/route.ts` | Auth.js route handlers |
-| `src/components/AppNav.tsx` | Top nav: Chat / Profiles / Google sign-in |
+| `src/components/AppNav.tsx` | Top nav: Chat / Account when signed in |
 | `src/app/layout.tsx` | Root layout + nav |
 | `src/app/page.tsx` | Chat home |
 | `src/app/globals.css` | Global styles |
@@ -194,4 +194,4 @@ Imports can use the `@/*` alias (see `tsconfig.json` → `paths`).
 ## Behavior
 
 - **Chat:** data stays in React state; the demo still appends a fake assistant reply. Customize `sendMessage` in `src/components/ChatApp.tsx` for a real backend.
-- **Profiles:** persisted in Postgres through Prisma; create flow posts to `/api/profiles` and refreshes the server-rendered list.
+- **Account:** persisted in Postgres (`accounts` table) through Prisma; create flow posts to `/api/account` and refreshes the server-rendered list.
