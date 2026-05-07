@@ -1,3 +1,4 @@
+import { seedConversations } from "@/mockData";
 import type { Conversation } from "@/types";
 
 const STORAGE_PREFIX = "single-thread:chats:";
@@ -31,6 +32,19 @@ export function saveConversations(profileId: string, list: Conversation[]): void
   } catch {
     /* quota or private mode */
   }
+}
+
+/** Load threads for this profile from storage, or seed demo data once per profile. */
+export function hydrateConversationsForProfile(profileId: string): Conversation[] {
+  if (typeof window === "undefined") {
+    return seedConversations(profileId);
+  }
+  let list = loadConversations(profileId);
+  if (!list || list.length === 0) {
+    list = seedConversations(profileId);
+    saveConversations(profileId, list);
+  }
+  return list;
 }
 
 export function readSelectedProfileId(): string | null {

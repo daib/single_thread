@@ -1,19 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ProfileChatSelect } from "@/components/ProfileChatSelect";
 import {
   GUEST_PROFILE_ID,
-  loadConversations,
+  hydrateConversationsForProfile,
   readSelectedProfileId,
   saveConversations,
   writeSelectedProfileId,
 } from "@/lib/chatStorage";
-import { seedConversations } from "@/mockData";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
+
 let idCounter = 1000;
 function nextId(prefix: string) {
   return `${prefix}-${++idCounter}`;
@@ -82,25 +82,32 @@ export function ChatApp() {
     setSelectedProfileId((prev) => (prev === next ? prev : next));
   }, [profilesReady, profileList]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedProfileId) {
       setConversations([]);
       setSelectedConvId(null);
       return;
     }
-    let list = loadConversations(selectedProfileId);
-    if (!list || list.length === 0) {
-      list = seedConversations(selectedProfileId);
-      saveConversations(selectedProfileId, list);
-    }
+    const list = hydrateConversationsForProfile(selectedProfileId);
     setConversations(list);
-    setSelectedConvId(list[0]?.id ?? null);
+    setSelectedConvId((prev) =>
+      prev && list.some((c) => c.id === prev) ? prev : (list[0]?.id ?? null),
+    );
   }, [selectedProfileId]);
 
   useEffect(() => {
     if (!selectedProfileId || conversations.length === 0) return;
+    if (!conversations.every((c) => c.profileId === selectedProfileId)) return;
     saveConversations(selectedProfileId, conversations);
   }, [selectedProfileId, conversations]);
+
+  const conversationsForProfile = useMemo(
+    () =>
+      selectedProfileId
+        ? conversations.filter((c) => c.profileId === selectedProfileId)
+        : [],
+    [conversations, selectedProfileId],
+  );
 
   const activeProfile = useMemo(
     () => profileList.find((p) => p.id === selectedProfileId),
@@ -108,13 +115,14 @@ export function ChatApp() {
   );
 
   const active = useMemo(
-    () => conversations.find((c) => c.id === selectedConvId),
-    [conversations, selectedConvId],
+    () => conversationsForProfile.find((c) => c.id === selectedConvId),
+    [conversationsForProfile, selectedConvId],
   );
 
   const sendMessage = useCallback(
     (conversationId: string, body: string) => {
-      if (!selectedProfileId) return;
+      const profileAtSend = selectedProfileId;
+      if (!profileAtSend) return;
       const now = new Date().toISOString();
       const userMsg: Message = {
         id: nextId("m"),
@@ -125,11 +133,11 @@ export function ChatApp() {
 
       setConversations((prev) =>
         prev.map((c) => {
-          if (c.id !== conversationId) return c;
+          if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
           const messages = [...c.messages, userMsg];
           return {
             ...c,
-            profileId: selectedProfileId,
+            profileId: profileAtSend,
             messages,
             preview: body,
             updatedAt: now,
@@ -146,11 +154,11 @@ export function ChatApp() {
         };
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id !== conversationId) return c;
+            if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
             const messages = [...c.messages, reply];
             return {
               ...c,
-              profileId: selectedProfileId,
+              profileId: profileAtSend,
               messages,
               preview: reply.body,
               updatedAt: reply.sentAt,
@@ -198,7 +206,7 @@ export function ChatApp() {
       ) : (
         <div className="app-shell">
           <ConversationSidebar
-            conversations={conversations}
+            conversations={conversationsForProfile}
             selectedId={selectedConvId}
             onSelect={setSelectedConvId}
           />
