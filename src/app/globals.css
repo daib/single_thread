@@ -347,6 +347,37 @@ textarea {
   flex: 1;
 }
 
+.conversation-tree-branch {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.conversation-tree-branch > .conversation-row {
+  margin-bottom: 0.25rem;
+}
+
+.conversation-tree-children {
+  list-style: none;
+  margin: 0 0 0.25rem 0.35rem;
+  padding: 0 0 0 0.65rem;
+  border-left: 2px solid var(--border);
+}
+
+.conversation-row-nested .conversation-item {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.conversation-branch-tag {
+  display: inline-block;
+  margin-right: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 600;
+  user-select: none;
+}
+
 .conversation-row {
   display: flex;
   align-items: stretch;

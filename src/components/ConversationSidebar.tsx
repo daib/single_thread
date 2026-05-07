@@ -1,5 +1,8 @@
+"use client";
+
 import { ChatMoreMenu } from "@/components/ChatMoreMenu";
 import { formatRelativeTime } from "@/formatTime";
+import { buildConversationTree, type ConversationTreeNode } from "@/lib/conversationTree";
 import type { Conversation } from "@/types";
 
 interface Props {
@@ -11,6 +14,70 @@ interface Props {
   onBranch: (id: string) => void;
 }
 
+function ConversationTreeBranch({
+  node,
+  selectedId,
+  onSelect,
+  onDelete,
+  onBranch,
+}: {
+  node: ConversationTreeNode;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  onBranch: (id: string) => void;
+}) {
+  const { conv, children } = node;
+  const active = conv.id === selectedId;
+  const isNested = Boolean(conv.branchOfId);
+
+  return (
+    <li className="conversation-tree-branch">
+      <div className={`conversation-row${isNested ? " conversation-row-nested" : ""}`}>
+        <button
+          type="button"
+          id={conv.id}
+          aria-current={active ? "true" : undefined}
+          aria-label={`Open conversation: ${conv.title}`}
+          className={`conversation-item${active ? " active" : ""}`}
+          onClick={() => onSelect(conv.id)}
+        >
+          <div className="conversation-item-title">
+            {isNested ? (
+              <span className="conversation-branch-tag" title="Branched thread">
+                ↳
+              </span>
+            ) : null}
+            {conv.title}
+          </div>
+          <div className="conversation-item-preview">{conv.preview}</div>
+          <div className="conversation-meta">{formatRelativeTime(conv.updatedAt)}</div>
+        </button>
+        <ChatMoreMenu
+          conversationLabel={conv.title}
+          variant="sidebar"
+          onDelete={() => onDelete(conv.id)}
+          onBranch={conv.messages.length > 0 ? () => onBranch(conv.id) : undefined}
+        />
+      </div>
+      {children.length > 0 ? (
+        <ul className="conversation-tree-children">
+          {children.map((ch) => (
+            <ConversationTreeBranch
+              key={ch.conv.id}
+              node={ch}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              onDelete={onDelete}
+              onBranch={onBranch}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
 export function ConversationSidebar({
   conversations,
   selectedId,
@@ -19,10 +86,7 @@ export function ConversationSidebar({
   onNewChat,
   onBranch,
 }: Props) {
-  const sorted = [...conversations].sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
+  const tree = buildConversationTree(conversations);
 
   return (
     <aside className="sidebar" aria-label="Conversations">
@@ -32,36 +96,17 @@ export function ConversationSidebar({
           New chat
         </button>
       </div>
-      <ul className="conversation-list" role="listbox" aria-activedescendant={selectedId ?? undefined}>
-        {sorted.map((c) => {
-          const active = c.id === selectedId;
-          return (
-            <li key={c.id} className="conversation-row">
-              <button
-                type="button"
-                id={c.id}
-                role="option"
-                aria-selected={active}
-                className={`conversation-item${active ? " active" : ""}`}
-                onClick={() => onSelect(c.id)}
-              >
-                <div className="conversation-item-title">{c.title}</div>
-                <div className="conversation-item-preview">{c.preview}</div>
-                <div className="conversation-meta">
-                  {formatRelativeTime(c.updatedAt)}
-                </div>
-              </button>
-              <ChatMoreMenu
-                conversationLabel={c.title}
-                variant="sidebar"
-                onDelete={() => onDelete(c.id)}
-                onBranch={
-                  c.messages.length > 0 ? () => onBranch(c.id) : undefined
-                }
-              />
-            </li>
-          );
-        })}
+      <ul className="conversation-list">
+        {tree.map((node) => (
+          <ConversationTreeBranch
+            key={node.conv.id}
+            node={node}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            onDelete={onDelete}
+            onBranch={onBranch}
+          />
+        ))}
       </ul>
     </aside>
   );
