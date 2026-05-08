@@ -22,6 +22,7 @@ export async function requestLettaReply(userText: string): Promise<string> {
 
   const data = (await res.json().catch(() => ({}))) as {
     reply?: string | null;
+    hint?: string;
     error?: string;
     detail?: string;
     lettaStatus?: number;
@@ -40,5 +41,6 @@ export async function requestLettaReply(userText: string): Promise<string> {
     return data.reply.trim();
   }
 
-  return "Letta returned no assistant text. Check the agent and server logs.";
+  const tail = data.hint ? ` ${data.hint}` : "";
+  return `Letta returned no assistant text.${tail}`.trim();
 }

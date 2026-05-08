@@ -1,12 +1,24 @@
 import type { MessageCreate } from "@letta-ai/letta-client/resources/agents/agents";
 import { APIConnectionError, APIError, Letta } from "@letta-ai/letta-client";
 import { NextResponse } from "next/server";
-import { extractLettaAssistantText } from "@/lib/extractLettaAssistantText";
+import { resolveLettaAssistantReply } from "@/lib/resolveLettaAssistantReply";
 import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
 
 export const runtime = "nodejs";
 
 loadLettaEnvFile();
+
+const LETTA_DEBUG_JSON_MAX = 24_000;
+
+function jsonSnippet(value: unknown, maxChars: number): string {
+  try {
+    const s = JSON.stringify(value);
+    if (s.length <= maxChars) return s;
+    return `${s.slice(0, maxChars)} … [truncated, ${s.length} chars total]`;
+  } catch {
+    return String(value).slice(0, maxChars);
+  }
+}
 
 /**
  * Sends text to a Letta agent and returns the assistant reply in JSON when configured.
@@ -104,10 +116,23 @@ export async function POST(request: Request) {
         } as unknown as MessageCreate,
       ],
       streaming: false,
+      // Legacy / MemGPT agents: ask Letta to surface `send_message` tool calls as assistant messages in JSON.
+      use_assistant_message: true,
     });
 
-    const reply = extractLettaAssistantText(payload);
-    return NextResponse.json({ reply: reply ?? null });
+    const reply = await resolveLettaAssistantReply(client, agentId, payload);
+    if (reply == null && payload && typeof payload === "object") {
+      const msgs = (payload as { messages?: unknown }).messages;
+      console.warn("[letta/send] no assistant text after list fallback — create messages[]:");
+      console.warn(jsonSnippet(msgs ?? [], LETTA_DEBUG_JSON_MAX));
+      console.warn("[letta/send] full create response (truncated):");
+      console.warn(jsonSnippet(payload, LETTA_DEBUG_JSON_MAX));
+    }
+    const emptyHint =
+      reply == null
+        ? "MemGPT-style agents only show text sent via the send_message tool. If the model stopped after inner monologue or another tool, there may be nothing user-visible — check Letta ADE / agent tools and server logs."
+        : undefined;
+    return NextResponse.json({ reply: reply ?? null, ...(emptyHint ? { hint: emptyHint } : {}) });
   } catch (e) {
     if (e instanceof APIError) {
       const detailRaw = jsonErrorBodyForLog(e);
