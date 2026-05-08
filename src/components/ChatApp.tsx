@@ -607,9 +607,7 @@ export function ChatApp() {
         conversation={active}
         activeProfile={activeProfile}
         onSend={sendMessage}
-        onDelete={deleteConversation}
         onBranch={branchConversation}
-        onRename={openRename}
       />
     );
   }

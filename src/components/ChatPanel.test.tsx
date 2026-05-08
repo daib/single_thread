@@ -43,26 +43,14 @@ describe("ChatPanel", () => {
 
   it("shows empty state without conversation", () => {
     render(
-      <ChatPanel
-        conversation={undefined}
-        onSend={noop}
-        onDelete={noop}
-        onBranch={noop}
-        onRename={noop}
-      />,
+      <ChatPanel conversation={undefined} onSend={noop} onBranch={noop} />,
     );
     expect(screen.getByText("Select a conversation to read messages.")).toBeInTheDocument();
   });
 
   it("renders heading and message body", () => {
     render(
-      <ChatPanel
-        conversation={sampleConversation()}
-        onSend={noop}
-        onDelete={noop}
-        onBranch={noop}
-        onRename={noop}
-      />,
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={noop} />,
     );
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Test chat");
     expect(screen.getByText("Hello there")).toBeInTheDocument();
@@ -72,13 +60,7 @@ describe("ChatPanel", () => {
     const onSend = vi.fn();
     const user = userEvent.setup();
     render(
-      <ChatPanel
-        conversation={sampleConversation()}
-        onSend={onSend}
-        onDelete={noop}
-        onBranch={noop}
-        onRename={noop}
-      />,
+      <ChatPanel conversation={sampleConversation()} onSend={onSend} onBranch={noop} />,
     );
     await user.type(screen.getByRole("textbox", { name: "Message text" }), "outgoing");
     await user.click(screen.getByRole("button", { name: "Send" }));
@@ -88,13 +70,7 @@ describe("ChatPanel", () => {
   it("copies visible message via copy control", async () => {
     const user = userEvent.setup();
     render(
-      <ChatPanel
-        conversation={sampleConversation()}
-        onSend={noop}
-        onDelete={noop}
-        onBranch={noop}
-        onRename={noop}
-      />,
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={noop} />,
     );
     await user.click(screen.getByRole("button", { name: "Copy message to clipboard" }));
     expect(copyTextToClipboard).toHaveBeenCalledWith("Hello there");
@@ -104,13 +80,7 @@ describe("ChatPanel", () => {
     const onBranch = vi.fn();
     const user = userEvent.setup();
     render(
-      <ChatPanel
-        conversation={sampleConversation()}
-        onSend={noop}
-        onDelete={noop}
-        onBranch={onBranch}
-        onRename={noop}
-      />,
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={onBranch} />,
     );
     await user.click(
       screen.getByRole("button", { name: /Branch from this message \(Your message\)/ }),
@@ -123,9 +93,7 @@ describe("ChatPanel", () => {
       <ChatPanel
         conversation={sampleConversation({ branchOfId: "parent-id" })}
         onSend={noop}
-        onDelete={noop}
         onBranch={noop}
-        onRename={noop}
       />,
     );
     expect(screen.getByText("Branched")).toBeInTheDocument();
@@ -137,9 +105,7 @@ describe("ChatPanel", () => {
         conversation={sampleConversation()}
         activeProfile={{ id: "p1", displayName: "Ada", handle: "ada" }}
         onSend={noop}
-        onDelete={noop}
         onBranch={noop}
-        onRename={noop}
       />,
     );
     expect(screen.getByText("Ada")).toBeInTheDocument();
