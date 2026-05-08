@@ -120,6 +120,8 @@ export async function POST(request: Request) {
       use_assistant_message: true,
     });
 
+    console.log("[letta/send] Letta POST .../messages create response:", jsonSnippet(payload, LETTA_DEBUG_JSON_MAX));
+
     const reply = await resolveLettaAssistantReply(client, agentId, payload);
     if (reply == null && payload && typeof payload === "object") {
       const msgs = (payload as { messages?: unknown }).messages;
@@ -132,7 +134,9 @@ export async function POST(request: Request) {
       reply == null
         ? "MemGPT-style agents only show text sent via the send_message tool. If the model stopped after inner monologue or another tool, there may be nothing user-visible — check Letta ADE / agent tools and server logs."
         : undefined;
-    return NextResponse.json({ reply: reply ?? null, ...(emptyHint ? { hint: emptyHint } : {}) });
+    const responseBody = { reply: reply ?? null, ...(emptyHint ? { hint: emptyHint } : {}) };
+    console.log("[letta/send] Next.js API response to client:", jsonSnippet(responseBody, 4_000));
+    return NextResponse.json(responseBody);
   } catch (e) {
     if (e instanceof APIError) {
       const detailRaw = jsonErrorBodyForLog(e);

@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { mapConversation } from "@/lib/mapChatConversation";
+import {
+  getLastAssistantBeforeTrailingUser,
+  messagesBodiesDuplicate,
+} from "@/lib/lettaAssistantDedupe";
+import { mapConversation, mapMessage } from "@/lib/mapChatConversation";
 import { prisma } from "@/lib/prisma";
 import { requireOwnedConversation } from "@/lib/profileAccess";
+import type { Message } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -56,13 +61,32 @@ export async function POST(
   try {
     const before = await prisma.chatConversation.findUnique({
       where: { id: conversationId },
-      include: { messages: true },
+      include: { messages: { orderBy: { sentAt: "asc" } } },
     });
     if (!before) {
       return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
     }
 
     const wasEmpty = before.messages.length === 0;
+
+    if (parsed.role === "assistant") {
+      const uiMessages: Message[] = before.messages.map(mapMessage);
+      const priorAssist = getLastAssistantBeforeTrailingUser(uiMessages);
+      if (
+        priorAssist != null &&
+        messagesBodiesDuplicate(priorAssist, parsed.body) &&
+        uiMessages.length > 0 &&
+        uiMessages[uiMessages.length - 1].role === "user"
+      ) {
+        const full = await prisma.chatConversation.findUniqueOrThrow({
+          where: { id: conversationId },
+          include: { messages: { orderBy: { sentAt: "asc" } } },
+        });
+        return NextResponse.json({
+          conversation: mapConversation(full, profileId),
+        });
+      }
+    }
 
     await prisma.chatMessage.create({
       data: {

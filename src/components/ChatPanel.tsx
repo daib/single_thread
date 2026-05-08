@@ -1,6 +1,7 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ChatMoreMenu } from "@/components/ChatMoreMenu";
 import { formatClock } from "@/formatTime";
+import { messagesBodiesDuplicate } from "@/lib/lettaAssistantDedupe";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
 
 interface Props {
@@ -40,9 +41,29 @@ export function ChatPanel({
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  /** Drop consecutive assistant rows with the same body (stale Letta repeats / old DB rows). */
+  const displayMessages = useMemo(() => {
+    if (!conversation) return [];
+    const list = conversation.messages;
+    const out: Message[] = [];
+    for (const m of list) {
+      const prev = out[out.length - 1];
+      if (
+        prev &&
+        m.role === "assistant" &&
+        prev.role === "assistant" &&
+        messagesBodiesDuplicate(prev.body, m.body)
+      ) {
+        continue;
+      }
+      out.push(m);
+    }
+    return out;
+  }, [conversation]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [conversation?.id, conversation?.messages.length]);
+  }, [conversation?.id, displayMessages.length]);
 
   if (!conversation) {
     return (
@@ -80,7 +101,7 @@ export function ChatPanel({
                 </span>
               </>
             ) : null}
-            {conversation.messages.length} messages
+            {displayMessages.length} messages
             {conversation.branchOfId ? (
               <>
                 <span className="subtitle-sep" aria-hidden>
@@ -97,17 +118,17 @@ export function ChatPanel({
           onRename={() => onRename(conversation.id)}
           onDelete={() => onDelete(conversation.id)}
           onBranch={
-            conversation.messages.length > 0
+            displayMessages.length > 0
               ? () => onBranch(conversation.id)
               : undefined
           }
         />
       </header>
       <div className="messages">
-        {conversation.messages.length === 0 ? (
+        {displayMessages.length === 0 ? (
           <p className="messages-empty-hint">Send a message below to start this chat.</p>
         ) : null}
-        {conversation.messages.map((m) => (
+        {displayMessages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
         <div ref={bottomRef} />

@@ -14,6 +14,10 @@ import {
   saveConversations,
   writeSelectedProfileId,
 } from "@/lib/chatStorage";
+import {
+  getLastAssistantBeforeTrailingUser,
+  shouldShowAssistantReply,
+} from "@/lib/lettaAssistantDedupe";
 import { requestLettaReply } from "@/lib/requestLettaReply";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
 
@@ -235,7 +239,13 @@ export function ChatApp() {
             );
           }
 
+          const priorAssist = data.conversation
+            ? getLastAssistantBeforeTrailingUser(data.conversation.messages)
+            : undefined;
           const assistantBody = await requestLettaReply(trimmed);
+          if (!shouldShowAssistantReply(assistantBody, priorAssist)) {
+            return;
+          }
 
           const res2 = await fetch(
             `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
@@ -268,11 +278,13 @@ export function ChatApp() {
         sentAt: now,
       };
 
+      let priorAssistForDedupe: string | undefined;
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
           const wasEmpty = c.messages.length === 0;
           const messages = [...c.messages, userMsg];
+          priorAssistForDedupe = getLastAssistantBeforeTrailingUser(messages);
           let title = c.title;
           if (wasEmpty && c.title === "New chat" && trimmed.length > 0) {
             title = trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
@@ -289,6 +301,9 @@ export function ChatApp() {
       );
 
       const assistantBody = await requestLettaReply(trimmed);
+      if (!shouldShowAssistantReply(assistantBody, priorAssistForDedupe)) {
+        return;
+      }
       const replyAt = new Date().toISOString();
       const reply: Message = {
         id: nextId("m"),

@@ -3,6 +3,7 @@
 /**
  * Calls `/api/letta/send` and returns text to show as the assistant bubble.
  * When Letta is disabled (204), returns a setup hint instead of a fake demo reply.
+ * Returns empty string when there is nothing user-visible (null / Python None).
  */
 export async function requestLettaReply(userText: string): Promise<string> {
   const trimmed = userText.trim();
@@ -37,8 +38,15 @@ export async function requestLettaReply(userText: string): Promise<string> {
     return bits.filter(Boolean).join(" — ");
   }
 
-  if (typeof data.reply === "string" && data.reply.trim()) {
-    return data.reply.trim();
+  if (data.reply === undefined || data.reply === null) {
+    return "";
+  }
+  if (typeof data.reply === "string") {
+    const t = data.reply.trim();
+    if (!t || /^(none|null)$/i.test(t)) {
+      return "";
+    }
+    return t;
   }
 
   const tail = data.hint ? ` ${data.hint}` : "";
