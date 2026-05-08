@@ -28,19 +28,17 @@ function MessageBubble({
       aria-label={`${message.role} message`}
     >
       <div className="role-label">{isUser ? "You" : "Assistant"}</div>
-      <div className="message-bubble-row">
-        <div className="bubble">{message.body}</div>
-        <div className="message-actions-wrap">
-          <ChatMoreMenu
-            conversationLabel={`${isUser ? "Your" : "Assistant"} message`}
-            variant="message"
-            onBranch={() => onBranchHere(message.id)}
-          />
-        </div>
-      </div>
+      <div className="bubble">{message.body}</div>
       <time className="timestamp" dateTime={message.sentAt}>
         {formatClock(message.sentAt)}
       </time>
+      <div className="message-actions-wrap">
+        <ChatMoreMenu
+          conversationLabel={`${isUser ? "Your" : "Assistant"} message`}
+          variant="message"
+          onBranch={() => onBranchHere(message.id)}
+        />
+      </div>
     </div>
   );
 }

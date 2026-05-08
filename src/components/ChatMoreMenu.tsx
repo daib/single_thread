@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Props = {
   /** Shown to screen readers on the ⋮ trigger (e.g. chat title). */
@@ -22,7 +23,49 @@ export function ChatMoreMenu({
   variant = "sidebar",
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  const tipVisible = (hover || focus) && !open;
+
+  const updateTipPosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const gap = 8;
+    setTipPos({
+      left: r.left + r.width / 2,
+      top: r.bottom + gap,
+    });
+  }, []);
+
+  const primeTipPosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const gap = 8;
+    setTipPos({
+      left: r.left + r.width / 2,
+      top: r.bottom + gap,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!mounted || !tipVisible) return;
+    updateTipPosition();
+    window.addEventListener("scroll", updateTipPosition, true);
+    window.addEventListener("resize", updateTipPosition);
+    return () => {
+      window.removeEventListener("scroll", updateTipPosition, true);
+      window.removeEventListener("resize", updateTipPosition);
+    };
+  }, [mounted, tipVisible, updateTipPosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -48,24 +91,97 @@ export function ChatMoreMenu({
         ? "chat-more-trigger chat-more-trigger-message"
         : "chat-more-trigger";
 
+  const truncatedLabel =
+    conversationLabel.length > 72
+      ? `${conversationLabel.slice(0, 71)}…`
+      : conversationLabel;
+  const triggerTitle =
+    variant === "message"
+      ? "Branch from this message"
+      : `More options — ${truncatedLabel}`;
+
+  const tooltipPortal =
+    mounted &&
+    tipVisible &&
+    tipPos &&
+    createPortal(
+      <div
+        className="chat-tooltip-floater"
+        style={{
+          position: "fixed",
+          left: tipPos.left,
+          top: tipPos.top,
+          transform: "translateX(-50%)",
+          zIndex: 10100,
+        }}
+        role="tooltip"
+      >
+        {triggerTitle}
+      </div>,
+      document.body,
+    );
+
   return (
     <div className="chat-more-wrap" ref={wrapRef}>
+      {tooltipPortal}
       <button
+        ref={triggerRef}
         type="button"
         className={triggerClass}
-        aria-label={`More actions for “${conversationLabel}”`}
+        aria-label={
+          variant === "message"
+            ? `Branch from this message (${conversationLabel})`
+            : `More actions for “${conversationLabel}”`
+        }
         aria-expanded={open}
         aria-haspopup="menu"
+        onMouseEnter={() => {
+          primeTipPosition();
+          setHover(true);
+        }}
+        onMouseLeave={() => {
+          setHover(false);
+          setTipPos(null);
+        }}
+        onFocus={() => {
+          primeTipPosition();
+          setFocus(true);
+        }}
+        onBlur={() => {
+          setFocus(false);
+          setTipPos(null);
+        }}
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);
         }}
       >
-        <span aria-hidden className="chat-more-dots">
-          <span className="chat-more-dot" />
-          <span className="chat-more-dot" />
-          <span className="chat-more-dot" />
-        </span>
+        {variant === "message" ? (
+          <span aria-hidden className="chat-more-branch-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="6" x2="6" y1="3" y2="15" />
+              <circle cx="18" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M18 9v1a2 2 0 0 1-2 2H8l-4 4" />
+            </svg>
+          </span>
+        ) : (
+          <span aria-hidden className="chat-more-dots">
+            <span className="chat-more-dot" />
+            <span className="chat-more-dot" />
+            <span className="chat-more-dot" />
+          </span>
+        )}
       </button>
       {open ? (
         <div className="chat-more-dropdown" role="menu">
