@@ -43,6 +43,16 @@ function lettaClient(): Letta {
   });
 }
 
+function parseIsolatedBlockLabelsFromEnv(): string[] {
+  loadLettaEnvFile();
+  const raw = process.env.LETTA_CONVERSATION_ISOLATED_BLOCK_LABELS?.trim() ?? "";
+  if (!raw) return [];
+  return raw
+    .split(/[,\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function conversationIdFromUnknown(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const o = data as Record<string, unknown>;
@@ -57,7 +67,11 @@ export async function createLettaConversationForAgent(
   if (!agent) return { ok: false, detail: "Missing agent id." };
 
   try {
-    const conv = await lettaClient().conversations.create({ agent_id: agent });
+    const isolated = parseIsolatedBlockLabelsFromEnv();
+    const conv = await lettaClient().conversations.create({
+      agent_id: agent,
+      ...(isolated.length > 0 ? { isolated_block_labels: isolated } : {}),
+    });
     const id = conversationIdFromUnknown(conv);
     if (id) return { ok: true, id };
     return { ok: false, detail: "Letta returned conversation payload without id." };
