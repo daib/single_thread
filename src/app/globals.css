@@ -1001,6 +1001,10 @@ textarea {
   align-items: flex-end;
 }
 
+.message-row.user .message-bubble-row {
+  flex-direction: row-reverse;
+}
+
 .message-bubble-row {
   display: flex;
   flex-direction: row;
@@ -1074,6 +1078,11 @@ textarea {
 .message-actions-wrap .chat-more-dropdown {
   right: 0;
   left: auto;
+}
+
+.message-row.user .message-actions-wrap .chat-more-dropdown {
+  left: 0;
+  right: auto;
 }
 
 .composer {
