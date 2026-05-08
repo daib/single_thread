@@ -24,6 +24,14 @@ type CreateAgentBody = {
   };
 };
 
+type CreateBlockResponse = { id?: string };
+type CoreBlockSpec = {
+  label: "profile_memory" | "human" | "persona";
+  value: string;
+  limit: number;
+  name?: string;
+};
+
 /** Letta rejects names with e.g. parentheses; slug uses letters, digits, `-`. */
 function sanitizeLettaAgentName(displayName: string, profileId: string): string {
   const slug = displayName
@@ -47,6 +55,115 @@ function normalizeLlmModel(handle: string): string {
 
 function normalizeEmbeddingModel(handle: string): string {
   return normalizeLlmModel(handle);
+}
+
+function lettaHeaders(apiKey: string | null): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+  };
+}
+
+async function createAndAttachCoreBlock(opts: {
+  base: string;
+  apiKey: string | null;
+  agentId: string;
+  block: CoreBlockSpec;
+}): Promise<void> {
+  try {
+    const createRes = await fetch(`${opts.base}/v1/blocks/`, {
+      method: "POST",
+      headers: lettaHeaders(opts.apiKey),
+      body: JSON.stringify({
+        label: opts.block.label,
+        value: opts.block.value,
+        limit: opts.block.limit,
+        ...(opts.block.name ? { name: opts.block.name } : {}),
+      }),
+    });
+    if (!createRes.ok) {
+      const txt = await createRes.text();
+      console.warn(
+        "[lettaCreateProfileAgent] create block failed",
+        opts.block.label,
+        createRes.status,
+        txt.slice(0, 600),
+      );
+      return;
+    }
+    const block = (await createRes.json()) as CreateBlockResponse;
+    const blockId = typeof block.id === "string" ? block.id : "";
+    if (!blockId) {
+      console.warn(
+        "[lettaCreateProfileAgent] block create returned no id",
+        opts.block.label,
+      );
+      return;
+    }
+
+    const attachRes = await fetch(
+      `${opts.base}/v1/agents/${encodeURIComponent(opts.agentId)}/core-memory/blocks/attach/${encodeURIComponent(blockId)}`,
+      {
+        method: "PATCH",
+        headers: lettaHeaders(opts.apiKey),
+      },
+    );
+    if (!attachRes.ok) {
+      const txt = await attachRes.text();
+      console.warn(
+        "[lettaCreateProfileAgent] attach block failed",
+        opts.block.label,
+        attachRes.status,
+        txt.slice(0, 600),
+      );
+    }
+  } catch (e) {
+    console.warn(
+      "[lettaCreateProfileAgent] create/attach block exception",
+      opts.block.label,
+      e,
+    );
+  }
+}
+
+async function createAndAttachRequiredCoreBlocks(opts: {
+  base: string;
+  apiKey: string | null;
+  agentId: string;
+  displayName: string;
+  profileId: string;
+}): Promise<void> {
+  const blocks: CoreBlockSpec[] = [
+    {
+      label: "profile_memory",
+      value:
+        `Profile memory block for this persona.\n` +
+        `Display name: ${opts.displayName}\n` +
+        `Profile id: ${opts.profileId}\n` +
+        "Use this block to store long-lived profile-specific facts and preferences.",
+      limit: 4000,
+    },
+    {
+      label: "human",
+      value: `Display name: ${opts.displayName}\nProfile id: ${opts.profileId}`,
+      limit: 2000,
+    },
+    {
+      label: "persona",
+      name: "o1_persona",
+      value:
+        "I am an expert reasoning agent that can do the following:\n- Reason through a problem step by step, using multiple methods to explore all possibilities.\n- Send thinking messages to break down a problem into smaller steps.\n- Send final messages when you have the correct answer.\n- Use best practices and consider your limitations as an LLM.\n- For every user turn, I must call send_message with a clear, complete answer the user can read. I never end a turn without a user-visible send_message.\n- I answer substantive questions (including workplace or interpersonal topics) with balanced, practical guidance unless the user asks otherwise.\n",
+      limit: 2000,
+    },
+  ];
+  for (const block of blocks) {
+    await createAndAttachCoreBlock({
+      base: opts.base,
+      apiKey: opts.apiKey,
+      agentId: opts.agentId,
+      block,
+    });
+  }
 }
 
 /**
@@ -102,6 +219,15 @@ export async function createLettaAgentForProfile(opts: {
     },
     memory: {
       memory: {
+        profile_memory: {
+          label: "profile_memory",
+          value:
+            `Profile memory block for this persona.\n` +
+            `Display name: ${opts.displayName}\n` +
+            `Profile id: ${opts.profileId}\n` +
+            "Use this block to store long-lived profile-specific facts and preferences.",
+          limit: 4000,
+        },
         human: {
           label: "human",
           value: `Display name: ${opts.displayName}\nProfile id: ${opts.profileId}`,
@@ -122,8 +248,7 @@ export async function createLettaAgentForProfile(opts: {
     const res = await fetch(`${base}/v1/agents/`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        ...lettaHeaders(apiKey),
       },
       body: JSON.stringify(body),
     });
@@ -139,7 +264,18 @@ export async function createLettaAgentForProfile(opts: {
     }
 
     const data = (await res.json()) as { id?: string };
-    return typeof data.id === "string" ? data.id : null;
+    const agentId = typeof data.id === "string" ? data.id : null;
+    if (!agentId) return null;
+
+    await createAndAttachRequiredCoreBlocks({
+      base,
+      apiKey,
+      agentId,
+      displayName: opts.displayName,
+      profileId: opts.profileId,
+    });
+
+    return agentId;
   } catch (e) {
     console.error("[lettaCreateProfileAgent]", e);
     return null;
