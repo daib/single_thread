@@ -77,6 +77,33 @@ export async function createLettaConversationForAgent(
   }
 }
 
+export async function forkLettaConversation(
+  sourceConversationId: string,
+): Promise<CreateLettaConversationResult> {
+  const sourceId = sourceConversationId.trim();
+  if (!sourceId) return { ok: false, detail: "Missing source conversation id." };
+
+  try {
+    const conv = await lettaClient().conversations.fork(sourceId, {});
+    const id = conversationIdFromUnknown(conv);
+    if (id) return { ok: true, id };
+    return { ok: false, detail: "Letta returned fork payload without id." };
+  } catch (e) {
+    if (e instanceof APIError) {
+      const raw = (() => {
+        try {
+          return JSON.stringify(e.error);
+        } catch {
+          return e.message;
+        }
+      })();
+      return { ok: false, detail: raw.slice(0, 2000), status: e.status };
+    }
+    const detail = e instanceof Error ? e.message : String(e);
+    return { ok: false, detail: detail.slice(0, 500) };
+  }
+}
+
 /**
  * The SDK conversation create always streams SSE; use raw fetch for non-streaming JSON.
  */

@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { ensureChatLettaConversationId } from "@/lib/ensureChatLettaConversation";
+import { forkLettaConversation } from "@/lib/lettaConversationApi";
 import { mapConversation } from "@/lib/mapChatConversation";
 import { prisma } from "@/lib/prisma";
 import { requireOwnedProfile } from "@/lib/profileAccess";
@@ -121,7 +122,18 @@ export async function POST(
 
       const agentId =
         profile.lettaAgentId?.trim() || process.env.LETTA_AGENT_ID?.trim();
-      if (agentId) {
+      if (source.lettaConversationId?.trim()) {
+        const forked = await forkLettaConversation(source.lettaConversationId);
+        if (forked.ok) {
+          await prisma.chatConversation.update({
+            where: { id: created.id },
+            data: { lettaConversationId: forked.id },
+          });
+        } else if (agentId) {
+          // Keep branch creation resilient when fork fails on older/limited servers.
+          await ensureChatLettaConversationId(created.id, agentId);
+        }
+      } else if (agentId) {
         await ensureChatLettaConversationId(created.id, agentId);
       }
 
