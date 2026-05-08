@@ -137,15 +137,13 @@ async function createAndAttachRequiredCoreBlocks(opts: {
     {
       label: "profile_memory",
       value:
-        `Profile memory block for this persona.\n` +
-        `Display name: ${opts.displayName}\n` +
-        `Profile id: ${opts.profileId}\n` +
+        "Profile memory block for this persona.\n" +
         "Use this block to store long-lived profile-specific facts and preferences.",
       limit: 4000,
     },
     {
       label: "human",
-      value: `Display name: ${opts.displayName}\nProfile id: ${opts.profileId}`,
+      value: "The user is chatting with this profile.",
       limit: 2000,
     },
     {
@@ -222,15 +220,13 @@ export async function createLettaAgentForProfile(opts: {
         profile_memory: {
           label: "profile_memory",
           value:
-            `Profile memory block for this persona.\n` +
-            `Display name: ${opts.displayName}\n` +
-            `Profile id: ${opts.profileId}\n` +
+            "Profile memory block for this persona.\n" +
             "Use this block to store long-lived profile-specific facts and preferences.",
           limit: 4000,
         },
         human: {
           label: "human",
-          value: `Display name: ${opts.displayName}\nProfile id: ${opts.profileId}`,
+          value: "The user is chatting with this profile.",
           limit: 2000,
         },
         persona: {
