@@ -1205,15 +1205,28 @@ textarea {
   gap: 0.25rem;
 }
 
-.chat-more-download-icon {
+.chat-more-header-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 0;
 }
 
-.chat-more-download-icon svg {
+.chat-more-header-icon svg {
   display: block;
+}
+
+.chat-more-trigger-header.chat-more-trigger-danger {
+  color: #fca5a5;
+}
+
+.chat-more-trigger-header.chat-more-trigger-danger:hover {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+}
+
+.chat-more-trigger-header.chat-more-trigger-danger:focus-visible {
+  outline-color: #f87171;
 }
 
 .main-header h1 {

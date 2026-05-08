@@ -112,25 +112,40 @@ describe("ChatPanel", () => {
     expect(screen.getByText("@ada")).toBeInTheDocument();
   });
 
-  it("does not show header download without onDownload", () => {
+  it("does not show header action icons without callbacks", () => {
     render(
       <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={noop} />,
     );
+    expect(screen.queryByRole("button", { name: "Rename conversation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Branch conversation" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Download conversation as JSON" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete conversation" })).toBeNull();
   });
 
-  it("calls onDownload from header download control", async () => {
+  it("calls header action callbacks when provided", async () => {
+    const onRename = vi.fn();
+    const onBranchThread = vi.fn();
     const onDownload = vi.fn();
+    const onDelete = vi.fn();
     const user = userEvent.setup();
     render(
       <ChatPanel
         conversation={sampleConversation()}
         onSend={noop}
         onBranch={noop}
+        onRename={onRename}
+        onBranchThread={onBranchThread}
         onDownload={onDownload}
+        onDelete={onDelete}
       />,
     );
+    await user.click(screen.getByRole("button", { name: "Rename conversation" }));
+    await user.click(screen.getByRole("button", { name: "Branch conversation" }));
     await user.click(screen.getByRole("button", { name: "Download conversation as JSON" }));
+    await user.click(screen.getByRole("button", { name: "Delete conversation" }));
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(onBranchThread).toHaveBeenCalledTimes(1);
     expect(onDownload).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });

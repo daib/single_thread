@@ -617,6 +617,13 @@ export function ChatApp() {
         activeProfile={activeProfile}
         onSend={sendMessage}
         onBranch={branchConversation}
+        onRename={active ? () => openRename(active.id) : undefined}
+        onDelete={active ? () => void deleteConversation(active.id) : undefined}
+        onBranchThread={
+          active && active.messages.length > 0
+            ? () => branchConversation(active.id)
+            : undefined
+        }
         onDownload={active ? () => downloadConversationExport(active) : undefined}
       />
     );

@@ -11,7 +11,10 @@ interface Props {
   activeProfile?: ChatProfileOption | null;
   onSend: (conversationId: string, body: string) => void;
   onBranch: (conversationId: string, upToMessageId?: string) => void;
-  /** Export full thread (e.g. JSON). Shown as top-right icon when set. */
+  onRename?: () => void;
+  onDelete?: () => void;
+  /** Branch entire thread (like sidebar); omit when there is nothing to copy. */
+  onBranchThread?: () => void;
   onDownload?: () => void;
 }
 
@@ -76,6 +79,9 @@ export function ChatPanel({
   activeProfile,
   onSend,
   onBranch,
+  onRename,
+  onDelete,
+  onBranchThread,
   onDownload,
 }: Props) {
   const [draft, setDraft] = useState("");
@@ -125,6 +131,9 @@ export function ChatPanel({
     send();
   };
 
+  const hasHeaderActions = Boolean(onRename || onDelete || onBranchThread || onDownload);
+  const headerTriggerClass = "chat-more-trigger chat-more-trigger-header";
+
   return (
     <main className="main">
       <header className="main-header">
@@ -152,35 +161,125 @@ export function ChatPanel({
             ) : null}
           </p>
         </div>
-        {onDownload ? (
+        {hasHeaderActions ? (
           <div className="main-header-actions">
-            <PortalTooltipButton
-              tooltip="Download conversation"
-              ariaLabel="Download conversation as JSON"
-              className="chat-more-trigger chat-more-trigger-header"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDownload();
-              }}
-            >
-              <span aria-hidden className="chat-more-download-icon">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" x2="12" y1="15" y2="3" />
-                </svg>
-              </span>
-            </PortalTooltipButton>
+            {onRename ? (
+              <PortalTooltipButton
+                tooltip="Rename conversation"
+                ariaLabel="Rename conversation"
+                className={headerTriggerClass}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRename();
+                }}
+              >
+                <span aria-hidden className="chat-more-header-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
+                </span>
+              </PortalTooltipButton>
+            ) : null}
+            {onBranchThread ? (
+              <PortalTooltipButton
+                tooltip="Branch conversation"
+                ariaLabel="Branch conversation"
+                className={headerTriggerClass}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBranchThread();
+                }}
+              >
+                <span aria-hidden className="chat-more-header-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="6" x2="6" y1="3" y2="15" />
+                    <circle cx="18" cy="6" r="3" />
+                    <circle cx="6" cy="18" r="3" />
+                    <path d="M18 9v1a2 2 0 0 1-2 2H8l-4 4" />
+                  </svg>
+                </span>
+              </PortalTooltipButton>
+            ) : null}
+            {onDownload ? (
+              <PortalTooltipButton
+                tooltip="Download conversation"
+                ariaLabel="Download conversation as JSON"
+                className={headerTriggerClass}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownload();
+                }}
+              >
+                <span aria-hidden className="chat-more-header-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" x2="12" y1="15" y2="3" />
+                  </svg>
+                </span>
+              </PortalTooltipButton>
+            ) : null}
+            {onDelete ? (
+              <PortalTooltipButton
+                tooltip="Delete conversation"
+                ariaLabel="Delete conversation"
+                className={`${headerTriggerClass} chat-more-trigger-danger`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <span aria-hidden className="chat-more-header-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" x2="10" y1="11" y2="17" />
+                    <line x1="14" x2="14" y1="11" y2="17" />
+                  </svg>
+                </span>
+              </PortalTooltipButton>
+            ) : null}
           </div>
         ) : null}
       </header>
