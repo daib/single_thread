@@ -44,6 +44,8 @@ model ChatConversation {
   id          String    @id @default(uuid())
   profileId   String    @map("profile_id")
   profile     AppProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  /** One Letta conversation id per app chat thread (isolated server-side context). */
+  lettaConversationId String? @map("letta_conversation_id")
   title       String
   preview     String    @default("")
   branchOfId  String?   @map("branch_of_id")

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { deleteLettaConversationBestEffort } from "@/lib/lettaConversationApi";
 import { mapConversation } from "@/lib/mapChatConversation";
 import { prisma } from "@/lib/prisma";
 import { requireOwnedConversation } from "@/lib/profileAccess";
@@ -77,6 +78,9 @@ export async function DELETE(
   }
 
   try {
+    if (conv.lettaConversationId?.trim()) {
+      await deleteLettaConversationBestEffort(conv.lettaConversationId);
+    }
     await prisma.chatConversation.delete({ where: { id: conversationId } });
     return new NextResponse(null, { status: 204 });
   } catch (e) {

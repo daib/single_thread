@@ -13,18 +13,30 @@ export async function resolveLettaAssistantReply(
   client: Letta,
   agentId: string,
   createPayload: unknown,
-  opts?: { currentUserText?: string; startedAtMs?: number },
+  opts?: {
+    currentUserText?: string;
+    startedAtMs?: number;
+    conversationLettaId?: string;
+  },
 ): Promise<string | null> {
+  const conversationLettaId = opts?.conversationLettaId?.trim() || undefined;
   let toParse: unknown = createPayload;
   if (payloadHasStubMessages(createPayload)) {
-    toParse = await hydrateLettaResponseMessages(client, createPayload, agentId);
+    toParse = await hydrateLettaResponseMessages(
+      client,
+      createPayload,
+      agentId,
+      conversationLettaId,
+    );
   }
 
   let reply = extractLettaAssistantText(toParse);
   if (reply != null) return reply;
 
   try {
-    const page = await client.agents.messages.list(agentId, { limit: 80 });
+    const page = conversationLettaId
+      ? await client.conversations.messages.list(conversationLettaId, { limit: 80 })
+      : await client.agents.messages.list(agentId, { limit: 80 });
     // Docker Letta may return `{ "messages": [...] }` while the SDK ArrayPage stores that object on `items`.
     let rows = coerceToMessagesArray(page.items as unknown);
     if (rows.length === 0) {
@@ -35,7 +47,12 @@ export async function resolveLettaAssistantReply(
 
     let listPayload: unknown = { messages: rows };
     if (payloadHasStubMessages(listPayload)) {
-      listPayload = await hydrateLettaResponseMessages(client, listPayload, agentId);
+      listPayload = await hydrateLettaResponseMessages(
+        client,
+        listPayload,
+        agentId,
+        conversationLettaId,
+      );
     }
 
     reply = extractLettaAssistantText(listPayload);
@@ -50,7 +67,12 @@ export async function resolveLettaAssistantReply(
         : typeof rows[0],
     );
   } catch (e) {
-    console.warn("[letta/send] agents.messages.list fallback failed:", e);
+    console.warn(
+      conversationLettaId
+        ? "[letta/send] conversations.messages.list fallback failed:"
+        : "[letta/send] agents.messages.list fallback failed:",
+      e,
+    );
   }
 
   return null;

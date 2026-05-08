@@ -17,7 +17,12 @@ export function isStubOnlyLettaMessage(msg: unknown): boolean {
   return keysWithValues.every((k) => k === "id" || k === "date");
 }
 
-async function fetchMessageById(client: Letta, agentId: string | undefined, id: string): Promise<unknown | null> {
+async function fetchMessageById(
+  client: Letta,
+  agentId: string | undefined,
+  conversationLettaId: string | undefined,
+  id: string,
+): Promise<unknown | null> {
   try {
     const raw = await client.messages.retrieve(id);
     const full = Array.isArray(raw) ? raw[0] : raw;
@@ -28,6 +33,17 @@ async function fetchMessageById(client: Letta, agentId: string | undefined, id: 
       try {
         const scoped = await client.get(
           `/v1/agents/${encodeURIComponent(agentId)}/messages/${encodeURIComponent(id)}`,
+        );
+        const body = await scoped;
+        if (body && typeof body === "object") return body;
+      } catch {
+        /* fall through */
+      }
+    }
+    if (conversationLettaId && is404) {
+      try {
+        const scoped = await client.get(
+          `/v1/conversations/${encodeURIComponent(conversationLettaId)}/messages/${encodeURIComponent(id)}`,
         );
         const body = await scoped;
         if (body && typeof body === "object") return body;
@@ -46,6 +62,7 @@ export async function hydrateLettaResponseMessages(
   client: Letta,
   payload: unknown,
   agentId?: string,
+  conversationLettaId?: string,
 ): Promise<unknown> {
   if (!payload || typeof payload !== "object") return payload;
   const root = payload as Record<string, unknown>;
@@ -70,7 +87,7 @@ export async function hydrateLettaResponseMessages(
       next.push(cache.get(id));
       continue;
     }
-    const full = await fetchMessageById(client, agentId, id);
+    const full = await fetchMessageById(client, agentId, conversationLettaId, id);
     if (full && typeof full === "object") {
       cache.set(id, full);
       next.push(full);

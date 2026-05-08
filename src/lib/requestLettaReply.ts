@@ -8,6 +8,7 @@
 export async function requestLettaReply(
   userText: string,
   profileId?: string | null,
+  conversationId?: string | null,
 ): Promise<string> {
   const trimmed = userText.trim();
   if (!trimmed) {
@@ -20,6 +21,7 @@ export async function requestLettaReply(
     body: JSON.stringify({
       body: trimmed,
       ...(profileId ? { profileId } : {}),
+      ...(profileId && conversationId ? { conversationId } : {}),
     }),
   });
 

@@ -235,7 +235,11 @@ export function ChatApp() {
             );
           }
 
-          const assistantBody = await requestLettaReply(trimmed, profileAtSend);
+          const assistantBody = await requestLettaReply(
+            trimmed,
+            profileAtSend,
+            conversationId,
+          );
           if (!assistantBody.trim()) {
             return;
           }

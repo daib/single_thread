@@ -2,9 +2,14 @@ import type { MessageCreate } from "@letta-ai/letta-client/resources/agents/agen
 import { APIConnectionError, APIError, Letta } from "@letta-ai/letta-client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { ensureChatLettaConversationId } from "@/lib/ensureChatLettaConversation";
+import {
+  LettaHttpError,
+  postLettaConversationMessageNonStreaming,
+} from "@/lib/lettaConversationApi";
 import { resolveLettaAssistantReply } from "@/lib/resolveLettaAssistantReply";
 import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
-import { requireOwnedProfile } from "@/lib/profileAccess";
+import { requireOwnedConversation, requireOwnedProfile } from "@/lib/profileAccess";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -13,6 +18,8 @@ loadLettaEnvFile();
 
 const LETTA_DEBUG_JSON_MAX = 24_000;
 const PROFILE_HISTORY_MAX_CHARS = 16_000;
+/** Sticky runtime guard: disable broken conversation endpoint after first server 5xx. */
+let conversationEndpointBrokenForSession = false;
 
 function jsonSnippet(value: unknown, maxChars: number): string {
   try {
@@ -85,16 +92,41 @@ async function sendAgentMessageCompatible(
     if (!(e instanceof APIError) || e.status !== 422) throw e;
     const detailRaw = jsonErrorBodyForLog(e);
     if (!missingRequiredField(detailRaw, "text")) throw e;
-    return client.agents.messages.create(agentId, {
-      messages: [
-        {
-          role: "user",
-          text: userText,
-        } as unknown as MessageCreate,
-      ],
-      streaming: false,
-      use_assistant_message: true,
-    });
+    try {
+      return await client.agents.messages.create(agentId, {
+        messages: [
+          {
+            role: "user",
+            text: userText,
+          } as unknown as MessageCreate,
+        ],
+        streaming: false,
+        use_assistant_message: true,
+      });
+    } catch (e2) {
+      // Some Letta builds report missing `text` then reject with missing `content`.
+      // Retry the original `content` payload once and, if it still fails, bubble the original error.
+      if (e2 instanceof APIError && e2.status === 422) {
+        const detail2 = jsonErrorBodyForLog(e2);
+        if (missingRequiredField(detail2, "content")) {
+          try {
+            return await client.agents.messages.create(agentId, {
+              messages: [
+                {
+                  role: "user",
+                  content: userText,
+                } as unknown as MessageCreate,
+              ],
+              streaming: false,
+              use_assistant_message: true,
+            });
+          } catch {
+            throw e;
+          }
+        }
+      }
+      throw e2;
+    }
   }
 }
 
@@ -151,6 +183,16 @@ function isSummarizeTooFewMessagesError(lettaStatus: number, detail: string): bo
   return /couldn'?t find enough messages to compress|len=\d+\s*<=\s*1/i.test(detail);
 }
 
+function isConversationStepSignatureError(lettaStatus: number, detail: string): boolean {
+  if (lettaStatus !== 500) return false;
+  return /unexpected keyword argument ['"]conversation_id['"]/i.test(detail);
+}
+
+function isUnknownLettaServerError(lettaStatus: number, detail: string): boolean {
+  if (lettaStatus !== 500) return false;
+  return /unknown error occurred/i.test(detail);
+}
+
 function lettaErrorResponse(lettaStatus: number, detail: string) {
   let summary = "Letta request failed.";
   if (isAgentMissingError(lettaStatus, detail)) {
@@ -159,6 +201,12 @@ function lettaErrorResponse(lettaStatus: number, detail: string) {
   } else if (isSummarizeTooFewMessagesError(lettaStatus, detail)) {
     summary =
       "Letta: summarization/compaction failed because the thread had too few messages to compress (often the first turn or one very large message). Retry, upgrade the Letta server, or tune compaction in server config.";
+  } else if (isConversationStepSignatureError(lettaStatus, detail)) {
+    summary =
+      "Letta: server build mismatch in conversation runtime (`conversation_id` passed to an incompatible `step()` signature). Update/rebuild Letta so routers and runtime are on the same version.";
+  } else if (isUnknownLettaServerError(lettaStatus, detail)) {
+    summary =
+      "Letta: internal server error with no detail. Check Letta container logs and verify request payload compatibility for your server build. If this only affects conversation-thread sends, compare with agent-message sends to isolate the mismatch.";
   } else if (lettaStatus === 401 || lettaStatus === 403) {
     summary =
       "Letta: authentication failed — set LETTA_API_KEY (e.g. LETTA_SERVER_PASSWORD if SECURE=true).";
@@ -196,9 +244,18 @@ export async function POST(request: Request) {
 
   const profileIdRaw =
     typeof o.profileId === "string" ? o.profileId.trim() : "";
+  const appConversationIdRaw =
+    typeof o.conversationId === "string" ? o.conversationId.trim() : "";
+  if (appConversationIdRaw && !profileIdRaw) {
+    return NextResponse.json(
+      { error: "conversationId requires profileId." },
+      { status: 400 },
+    );
+  }
 
   let agentId: string | undefined;
   let outboundUserText = bodyText;
+  let lettaConversationId: string | undefined;
 
   if (profileIdRaw) {
     const session = await auth();
@@ -215,13 +272,38 @@ export async function POST(request: Request) {
     agentId =
       profile.lettaAgentId?.trim() || process.env.LETTA_AGENT_ID?.trim();
 
-    try {
-      const historyContext = await buildProfileHistoryContext(profileIdRaw);
-      if (historyContext) {
-        outboundUserText = `${historyContext}\n\nCurrent user message:\n${bodyText}`;
+    if (appConversationIdRaw) {
+      const appConv = await requireOwnedConversation(
+        appConversationIdRaw,
+        session.user.id,
+      );
+      if (!appConv || appConv.profileId !== profileIdRaw) {
+        return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
       }
-    } catch (e) {
-      console.warn("[letta/send] could not build profile history context:", e);
+      if (!agentId) {
+        return new NextResponse(null, { status: 204 });
+      }
+      const ensured = await ensureChatLettaConversationId(appConversationIdRaw, agentId);
+      if (!ensured.ok) {
+        return NextResponse.json(
+          {
+            error: "Letta: could not create/find a server conversation for this chat.",
+            detail: ensured.detail,
+            ...(ensured.status != null ? { lettaStatus: ensured.status } : {}),
+          },
+          { status: 503 },
+        );
+      }
+      lettaConversationId = ensured.id;
+    } else {
+      try {
+        const historyContext = await buildProfileHistoryContext(profileIdRaw);
+        if (historyContext) {
+          outboundUserText = `${historyContext}\n\nCurrent user message:\n${bodyText}`;
+        }
+      } catch (e) {
+        console.warn("[letta/send] could not build profile history context:", e);
+      }
     }
   } else {
     agentId = process.env.LETTA_AGENT_ID?.trim();
@@ -240,17 +322,54 @@ export async function POST(request: Request) {
   });
 
   try {
-    const payload = await sendAgentMessageCompatible(
-      client,
-      agentId,
-      outboundWithToolNudge,
-    );
+    let usedConversationThread =
+      Boolean(lettaConversationId) && !conversationEndpointBrokenForSession;
+    let payload: unknown;
+    if (usedConversationThread && lettaConversationId) {
+      try {
+        payload = await postLettaConversationMessageNonStreaming(
+          lettaConversationId,
+          outboundWithToolNudge,
+        );
+      } catch (e) {
+        if (e instanceof LettaHttpError && e.status >= 500) {
+          // Keep chat working when conversation endpoint is broken on this Letta build.
+          conversationEndpointBrokenForSession = true;
+          const why = isConversationStepSignatureError(e.status, e.message)
+            ? "step(conversation_id) signature mismatch"
+            : `HTTP ${e.status}`;
+          console.warn(
+            `[letta/send] conversations.send failed (${why}); falling back to agent thread and disabling conversation endpoint for this dev session.`,
+          );
+          usedConversationThread = false;
+          payload = await sendAgentMessageCompatible(
+            client,
+            agentId,
+            outboundWithToolNudge,
+          );
+        } else {
+          throw e;
+        }
+      }
+    } else {
+      payload = await sendAgentMessageCompatible(
+        client,
+        agentId,
+        outboundWithToolNudge,
+      );
+    }
 
-    console.log("[letta/send] Letta POST .../messages create response:", jsonSnippet(payload, LETTA_DEBUG_JSON_MAX));
+    console.log(
+      usedConversationThread
+        ? "[letta/send] Letta POST .../conversations/.../messages response:"
+        : "[letta/send] Letta POST .../messages create response:",
+      jsonSnippet(payload, LETTA_DEBUG_JSON_MAX),
+    );
 
     const reply = await resolveLettaAssistantReply(client, agentId, payload, {
       currentUserText: outboundWithToolNudge,
       startedAtMs,
+      conversationLettaId: usedConversationThread ? lettaConversationId : undefined,
     });
     if (reply == null && payload && typeof payload === "object") {
       const msgs = (payload as { messages?: unknown }).messages;
@@ -267,6 +386,11 @@ export async function POST(request: Request) {
     console.log("[letta/send] Next.js API response to client:", jsonSnippet(responseBody, 4_000));
     return NextResponse.json(responseBody);
   } catch (e) {
+    if (e instanceof LettaHttpError) {
+      const hint = summarizeLettaErrorBody(e.message);
+      console.error("[letta/send]", e.status, e.message.slice(0, 800));
+      return lettaErrorResponse(e.status, hint);
+    }
     if (e instanceof APIError) {
       const detailRaw = jsonErrorBodyForLog(e);
       const hint = summarizeLettaErrorBody(detailRaw);

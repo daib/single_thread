@@ -1,5 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { ensureChatLettaConversationId } from "@/lib/ensureChatLettaConversation";
 import { mapConversation } from "@/lib/mapChatConversation";
 import { prisma } from "@/lib/prisma";
 import { requireOwnedProfile } from "@/lib/profileAccess";
@@ -33,7 +35,7 @@ export async function GET(
         messages: { orderBy: { sentAt: "asc" } },
       },
     });
-    const list = rows.map((c) => mapConversation(c, profileId));
+    const list = rows.map((c: (typeof rows)[number]) => mapConversation(c, profileId));
     return NextResponse.json(list);
   } catch (e) {
     console.error(e);
@@ -92,7 +94,7 @@ export async function POST(
       const truncated =
         source.title.length > 52 ? `${source.title.slice(0, 52)}…` : source.title;
 
-      const created = await prisma.$transaction(async (tx) => {
+      const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const newConv = await tx.chatConversation.create({
           data: {
             profileId,
@@ -117,6 +119,12 @@ export async function POST(
         });
       });
 
+      const agentId =
+        profile.lettaAgentId?.trim() || process.env.LETTA_AGENT_ID?.trim();
+      if (agentId) {
+        await ensureChatLettaConversationId(created.id, agentId);
+      }
+
       return NextResponse.json(mapConversation(created, profileId), { status: 201 });
     }
 
@@ -137,6 +145,12 @@ export async function POST(
       },
       include: { messages: true },
     });
+
+    const agentId =
+      profile.lettaAgentId?.trim() || process.env.LETTA_AGENT_ID?.trim();
+    if (agentId) {
+      await ensureChatLettaConversationId(conv.id, agentId);
+    }
 
     return NextResponse.json(mapConversation(conv, profileId), { status: 201 });
   } catch (e) {
