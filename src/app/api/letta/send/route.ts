@@ -102,11 +102,20 @@ function isAgentMissingError(lettaStatus: number, detail: string): boolean {
   return false;
 }
 
+/** MemGPT compaction tried to summarize but the in-memory thread had ≤1 eligible message (common on early turns or huge single messages). */
+function isSummarizeTooFewMessagesError(lettaStatus: number, detail: string): boolean {
+  if (lettaStatus !== 500) return false;
+  return /couldn'?t find enough messages to compress|len=\d+\s*<=\s*1/i.test(detail);
+}
+
 function lettaErrorResponse(lettaStatus: number, detail: string) {
   let summary = "Letta request failed.";
   if (isAgentMissingError(lettaStatus, detail)) {
     summary =
       "Letta: no agent with this id — set LETTA_AGENT_ID to an existing agent (Letta ADE, or `GET /v1/agents` against this server).";
+  } else if (isSummarizeTooFewMessagesError(lettaStatus, detail)) {
+    summary =
+      "Letta: summarization/compaction failed because the thread had too few messages to compress (often the first turn or one very large message). Retry, upgrade the Letta server, or tune compaction in server config.";
   } else if (lettaStatus === 401 || lettaStatus === 403) {
     summary =
       "Letta: authentication failed — set LETTA_API_KEY (e.g. LETTA_SERVER_PASSWORD if SECURE=true).";

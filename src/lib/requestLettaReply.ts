@@ -36,11 +36,22 @@ export async function requestLettaReply(
   };
 
   if (!res.ok) {
-    const bits = [data.error ?? `HTTP ${res.status}`];
-    if (data.detail) bits.push(data.detail);
-    if (data.lettaStatus != null && data.lettaStatus !== 0) {
-      bits.push(`(Letta HTTP ${data.lettaStatus})`);
-    }
+    const err = data.error ?? `HTTP ${res.status}`;
+    const bits = [err];
+    // `/api/letta/send` sets a long `error` for known cases while `detail` is the raw Letta body — joining both duplicates the same failure.
+    const detailTrim =
+      typeof data.detail === "string" ? data.detail.trim() : "";
+    const appendDetail =
+      detailTrim.length > 0 &&
+      (err === "Letta request failed." || err === "Letta: rejected the request.");
+    if (appendDetail) bits.push(detailTrim);
+    const showLettaHttp =
+      data.lettaStatus != null &&
+      data.lettaStatus !== 0 &&
+      (err === "Letta request failed." ||
+        err === "Letta: rejected the request." ||
+        /^HTTP \d+$/.test(err));
+    if (showLettaHttp) bits.push(`(Letta HTTP ${data.lettaStatus})`);
     return bits.filter(Boolean).join(" — ");
   }
 
