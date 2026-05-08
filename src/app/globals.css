@@ -251,33 +251,6 @@ textarea {
   align-items: stretch;
 }
 
-.sidebar-profile-panel .profile-chat-select {
-  min-width: 0;
-  width: 100%;
-}
-
-.profile-chat-select {
-  min-width: min(280px, 100%);
-  padding: 0.45rem 0.65rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-root);
-  color: var(--text);
-  font-size: 0.88rem;
-  cursor: pointer;
-  outline: none;
-}
-
-.profile-chat-select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.profile-chat-select:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .profile-chat-status,
 .profile-chat-hint {
   font-size: 0.85rem;
@@ -666,6 +639,16 @@ textarea {
   border-color: var(--accent);
 }
 
+.sidebar-account-menu-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sidebar-account-menu-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .sidebar-account-menu-user {
   display: flex;
   min-width: 0;
@@ -720,6 +703,30 @@ textarea {
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   box-shadow: var(--shadow);
+}
+
+.sidebar-account-menu-dropdown--below {
+  top: calc(100% + 6px);
+  bottom: auto;
+  max-height: min(240px, 42vh);
+  overflow-y: auto;
+}
+
+.sidebar-account-menu-item-active {
+  background: var(--bg-active);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.sidebar-account-menu-item-active:hover {
+  background: var(--bg-active);
+}
+
+.profile-chat-select-handle {
+  margin-left: 0.25rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.82em;
+  font-weight: 500;
+  color: var(--accent);
 }
 
 .sidebar-account-menu-item {

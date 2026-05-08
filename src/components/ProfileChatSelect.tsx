@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DeleteProfileDialog } from "@/components/DeleteProfileDialog";
 import { QuickProfileDialog, type QuickAccountOption } from "@/components/QuickProfileDialog";
 import type { ChatProfileOption } from "@/types";
+
+function profileInitial(profile: ChatProfileOption | undefined): string {
+  if (!profile) return "?";
+  const m = profile.displayName.match(/[a-z0-9]/i);
+  return m ? m[0]!.toUpperCase() : "?";
+}
 
 function NewProfileIcon() {
   return (
@@ -82,9 +88,29 @@ export function ProfileChatSelect({
     typeof onProfileDeleted === "function" &&
     Boolean(selectedProfile);
 
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (profileMenuRef.current?.contains(e.target as Node)) return;
+      setProfileMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setProfileMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [profileMenuOpen]);
+
   return (
     <div className="sidebar-profile-panel">
-      <label className="profile-chat-label" htmlFor="chat-profile-select">
+      <label className="profile-chat-label" id="profile-chat-label" htmlFor="chat-profile-select-trigger">
         Chatting as
       </label>
       {busy ? (
@@ -109,23 +135,63 @@ export function ProfileChatSelect({
         </div>
       ) : (
         <div className="profile-chat-controls">
-          <select
-            id="chat-profile-select"
-            className="profile-chat-select"
-            value={value ?? ""}
-            onChange={(e) => onChange(e.target.value)}
-            disabled={profiles.length === 0}
-          >
-            {profiles.length === 0 ? (
-              <option value="">—</option>
-            ) : (
-              profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.displayName} (@{p.handle})
-                </option>
-              ))
-            )}
-          </select>
+          <div className="sidebar-account-menu-wrap" ref={profileMenuRef}>
+            <button
+              type="button"
+              id="chat-profile-select-trigger"
+              className="sidebar-account-menu-trigger"
+              aria-expanded={profileMenuOpen}
+              aria-haspopup="listbox"
+              disabled={profiles.length === 0}
+              onClick={() => profiles.length > 0 && setProfileMenuOpen((v) => !v)}
+            >
+              <span className="sidebar-account-menu-user">
+                <span className="sidebar-account-menu-placeholder" aria-hidden>
+                  {profileInitial(selectedProfile)}
+                </span>
+                <span className="sidebar-account-menu-name">
+                  {selectedProfile ? (
+                    <>
+                      {selectedProfile.displayName}
+                      <span className="profile-chat-select-handle">@{selectedProfile.handle}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </span>
+              <span className="sidebar-account-menu-chevron" aria-hidden>
+                {profileMenuOpen ? "▴" : "▾"}
+              </span>
+            </button>
+            {profileMenuOpen && profiles.length > 0 ? (
+              <div
+                className="sidebar-account-menu-dropdown sidebar-account-menu-dropdown--below"
+                role="listbox"
+                aria-labelledby="profile-chat-label"
+              >
+                {profiles.map((p) => {
+                  const active = p.id === value;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      className={`sidebar-account-menu-item${active ? " sidebar-account-menu-item-active" : ""}`}
+                      onClick={() => {
+                        onChange(p.id);
+                        setProfileMenuOpen(false);
+                      }}
+                    >
+                      {p.displayName}
+                      <span className="profile-chat-select-handle">@{p.handle}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
           {canQuickCreate ? (
             <button
               type="button"
