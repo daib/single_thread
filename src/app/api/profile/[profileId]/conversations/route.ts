@@ -96,7 +96,7 @@ export async function POST(
         const newConv = await tx.chatConversation.create({
           data: {
             profileId,
-            title: `Branch · ${truncated}`,
+            title: truncated,
             preview: source.preview || "",
             branchOfId: source.id,
           },

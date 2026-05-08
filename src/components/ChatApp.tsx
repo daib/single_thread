@@ -377,7 +377,7 @@ export function ChatApp() {
         id,
         profileId: pid,
         branchOfId: source.id,
-        title: `Branch · ${truncated}`,
+        title: truncated,
         preview: source.preview,
         updatedAt: now,
         messages: source.messages.map((m) => ({
