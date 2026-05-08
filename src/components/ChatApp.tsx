@@ -23,6 +23,9 @@ function nextId(prefix: string) {
 export function ChatApp() {
   const { status } = useSession();
   const [profileList, setProfileList] = useState<ChatProfileOption[]>([]);
+  const [accountOptions, setAccountOptions] = useState<
+    Array<{ id: string; displayName: string; handle: string }>
+  >([]);
   const [profilesReady, setProfilesReady] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -39,6 +42,7 @@ export function ChatApp() {
       setProfileList([
         { id: GUEST_PROFILE_ID, displayName: "Guest", handle: "local" },
       ]);
+      setAccountOptions([]);
       setProfilesReady(true);
       return;
     }
@@ -50,12 +54,23 @@ export function ChatApp() {
       if (cancelled) return;
       if (!res.ok) {
         setProfileList([]);
+        setAccountOptions([]);
         setProfilesReady(true);
         return;
       }
       const accounts = (await res.json()) as Array<{
+        id: string;
+        displayName: string;
+        handle: string;
         profiles: Array<{ id: string; displayName: string; handle: string }>;
       }>;
+      setAccountOptions(
+        accounts.map((a) => ({
+          id: a.id,
+          displayName: a.displayName,
+          handle: a.handle,
+        })),
+      );
       const flat = accounts.flatMap((a) =>
         a.profiles.map((p) => ({
           id: p.id,
@@ -299,6 +314,15 @@ export function ChatApp() {
     setSelectedProfileId(profileId);
   }, []);
 
+  const onProfileCreated = useCallback((profile: ChatProfileOption) => {
+    setProfileList((prev) => {
+      if (prev.some((p) => p.id === profile.id)) return prev;
+      return [...prev, profile];
+    });
+    setSelectedProfileId(profile.id);
+    writeSelectedProfileId(profile.id);
+  }, []);
+
   const deleteConversation = useCallback(
     async (conversationId: string) => {
       const pid = selectedProfileId;
@@ -452,7 +476,7 @@ export function ChatApp() {
 
   const authLoading = status === "loading" || (status === "authenticated" && !profilesReady);
   const needsProfile =
-    status === "authenticated" && profilesReady && profileList.length === 0;
+    status === "authenticated" && profilesReady && profileList.length === 0 && accountOptions.length === 0;
   const chatsLoading =
     useServerChats && conversationsLoading && selectedProfileId != null;
 
@@ -463,6 +487,8 @@ export function ChatApp() {
         profiles={profileList}
         value={selectedProfileId}
         onChange={onProfileChange}
+        accounts={status === "authenticated" ? accountOptions : undefined}
+        onProfileCreated={status === "authenticated" ? onProfileCreated : undefined}
       />
 
       {authLoading ? (
