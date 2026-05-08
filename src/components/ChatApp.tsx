@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
@@ -570,7 +571,18 @@ export function ChatApp() {
     />
   );
 
-  const sidebarFooter = status === "authenticated" ? <SidebarAccountMenu /> : null;
+  const sidebarFooter =
+    status === "authenticated" ? (
+      <SidebarAccountMenu />
+    ) : status === "unauthenticated" ? (
+      <Link
+        href={`/login?callbackUrl=${encodeURIComponent("/")}`}
+        prefetch={false}
+        className="sidebar-guest-signin"
+      >
+        Sign in
+      </Link>
+    ) : null;
 
   let conversationsPanel: "full" | "loading" | "none" = "full";
   let mainContent: ReactNode;

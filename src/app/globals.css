@@ -612,6 +612,17 @@ textarea {
   background: var(--bg-elevated);
 }
 
+.sidebar-guest-signin {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.sidebar-guest-signin:hover {
+  text-decoration: underline;
+}
+
 .sidebar-account-menu-wrap {
   position: relative;
   width: 100%;
