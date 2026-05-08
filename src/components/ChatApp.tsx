@@ -16,6 +16,7 @@ import {
   saveConversations,
   writeSelectedProfileId,
 } from "@/lib/chatStorage";
+import { downloadConversationJson } from "@/lib/downloadConversation";
 import { requestLettaReply } from "@/lib/requestLettaReply";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
 
@@ -424,6 +425,14 @@ export function ChatApp() {
     [selectedProfileId, conversations],
   );
 
+  const downloadConversationExport = useCallback(
+    (c: Conversation) => {
+      const profile = profileList.find((p) => p.id === c.profileId);
+      downloadConversationJson(c, profile ?? null);
+    },
+    [profileList],
+  );
+
   const applyRename = useCallback(
     async (title: string) => {
       const pid = selectedProfileId;
@@ -608,6 +617,7 @@ export function ChatApp() {
         activeProfile={activeProfile}
         onSend={sendMessage}
         onBranch={branchConversation}
+        onDownload={active ? () => downloadConversationExport(active) : undefined}
       />
     );
   }
@@ -626,6 +636,7 @@ export function ChatApp() {
           onNewChat={createNewChat}
           onBranch={branchConversation}
           onRename={openRename}
+          onDownload={downloadConversationExport}
         />
         <div className="main">{mainContent}</div>
       </div>

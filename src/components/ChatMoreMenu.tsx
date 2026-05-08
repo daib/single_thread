@@ -11,6 +11,8 @@ type Props = {
   onBranch?: () => void;
   /** Open rename flow for this conversation. */
   onRename?: () => void;
+  /** Download full thread (e.g. JSON export). Sidebar/header only. */
+  onDownload?: () => void;
   /** Wider touch target in the main chat header; compact on message rows. */
   variant?: "sidebar" | "header" | "message";
 };
@@ -20,6 +22,7 @@ export function ChatMoreMenu({
   onDelete,
   onBranch,
   onRename,
+  onDownload,
   variant = "sidebar",
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -137,6 +140,20 @@ export function ChatMoreMenu({
               }}
             >
               Branch
+            </button>
+          ) : null}
+          {onDownload ? (
+            <button
+              type="button"
+              className="chat-more-item"
+              role="menuitem"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload();
+                setOpen(false);
+              }}
+            >
+              Download
             </button>
           ) : null}
           {onDelete ? (

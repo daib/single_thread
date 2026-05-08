@@ -37,6 +37,7 @@ describe("ConversationSidebar", () => {
         onNewChat={noop}
         onBranch={noop}
         onRename={noop}
+        onDownload={noop}
       />,
     );
     expect(screen.getByRole("button", { name: "New chat" })).toBeInTheDocument();
@@ -56,6 +57,7 @@ describe("ConversationSidebar", () => {
         onNewChat={noop}
         onBranch={noop}
         onRename={noop}
+        onDownload={noop}
       />,
     );
     await user.click(screen.getByRole("button", { name: "Open conversation: Pick me" }));
@@ -74,6 +76,7 @@ describe("ConversationSidebar", () => {
         onNewChat={onNewChat}
         onBranch={noop}
         onRename={noop}
+        onDownload={noop}
       />,
     );
     await user.click(screen.getByRole("button", { name: "New chat" }));
@@ -92,6 +95,7 @@ describe("ConversationSidebar", () => {
         onNewChat={noop}
         onBranch={noop}
         onRename={noop}
+        onDownload={noop}
       />,
     );
     expect(screen.getByTitle("Branched thread")).toBeInTheDocument();

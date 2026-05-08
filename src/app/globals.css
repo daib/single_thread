@@ -1187,9 +1187,33 @@ textarea {
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-start;
   gap: 1rem;
+}
+
+.main-header-titles {
+  min-width: 0;
+  flex: 1;
+}
+
+.main-header-actions {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chat-more-download-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.chat-more-download-icon svg {
+  display: block;
 }
 
 .main-header h1 {

@@ -22,6 +22,7 @@ interface Props {
   onNewChat: () => void;
   onBranch: (id: string, upToMessageId?: string) => void;
   onRename: (id: string) => void;
+  onDownload: (conversation: Conversation) => void;
 }
 
 function ConversationTreeBranch({
@@ -31,6 +32,7 @@ function ConversationTreeBranch({
   onDelete,
   onBranch,
   onRename,
+  onDownload,
 }: {
   node: ConversationTreeNode;
   selectedId: string | null;
@@ -38,6 +40,7 @@ function ConversationTreeBranch({
   onDelete: (id: string) => void;
   onBranch: (id: string, upToMessageId?: string) => void;
   onRename: (id: string) => void;
+  onDownload: (conversation: Conversation) => void;
 }) {
   const { conv, children } = node;
   const active = conv.id === selectedId;
@@ -71,6 +74,7 @@ function ConversationTreeBranch({
           onRename={() => onRename(conv.id)}
           onDelete={() => onDelete(conv.id)}
           onBranch={conv.messages.length > 0 ? () => onBranch(conv.id) : undefined}
+          onDownload={() => onDownload(conv)}
         />
       </div>
       {children.length > 0 ? (
@@ -84,6 +88,7 @@ function ConversationTreeBranch({
               onDelete={onDelete}
               onBranch={onBranch}
               onRename={onRename}
+              onDownload={onDownload}
             />
           ))}
         </ul>
@@ -103,6 +108,7 @@ export function ConversationSidebar({
   onNewChat,
   onBranch,
   onRename,
+  onDownload,
 }: Props) {
   const tree = buildConversationTree(conversations);
   const showConversations = conversationsPanel !== "none";
@@ -141,6 +147,7 @@ export function ConversationSidebar({
                     onDelete={onDelete}
                     onBranch={onBranch}
                     onRename={onRename}
+                    onDownload={onDownload}
                   />
                 ))}
               </ul>

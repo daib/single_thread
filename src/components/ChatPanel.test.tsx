@@ -111,4 +111,26 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Ada")).toBeInTheDocument();
     expect(screen.getByText("@ada")).toBeInTheDocument();
   });
+
+  it("does not show header download without onDownload", () => {
+    render(
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={noop} />,
+    );
+    expect(screen.queryByRole("button", { name: "Download conversation as JSON" })).toBeNull();
+  });
+
+  it("calls onDownload from header download control", async () => {
+    const onDownload = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChatPanel
+        conversation={sampleConversation()}
+        onSend={noop}
+        onBranch={noop}
+        onDownload={onDownload}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Download conversation as JSON" }));
+    expect(onDownload).toHaveBeenCalledTimes(1);
+  });
 });

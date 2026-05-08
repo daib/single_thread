@@ -11,6 +11,8 @@ interface Props {
   activeProfile?: ChatProfileOption | null;
   onSend: (conversationId: string, body: string) => void;
   onBranch: (conversationId: string, upToMessageId?: string) => void;
+  /** Export full thread (e.g. JSON). Shown as top-right icon when set. */
+  onDownload?: () => void;
 }
 
 function MessageBubble({
@@ -74,6 +76,7 @@ export function ChatPanel({
   activeProfile,
   onSend,
   onBranch,
+  onDownload,
 }: Props) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -125,7 +128,7 @@ export function ChatPanel({
   return (
     <main className="main">
       <header className="main-header">
-        <div>
+        <div className="main-header-titles">
           <h1>{conversation.title}</h1>
           <p className="subtitle">
             {activeProfile ? (
@@ -149,6 +152,37 @@ export function ChatPanel({
             ) : null}
           </p>
         </div>
+        {onDownload ? (
+          <div className="main-header-actions">
+            <PortalTooltipButton
+              tooltip="Download conversation"
+              ariaLabel="Download conversation as JSON"
+              className="chat-more-trigger chat-more-trigger-header"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload();
+              }}
+            >
+              <span aria-hidden className="chat-more-download-icon">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" x2="12" y1="15" y2="3" />
+                </svg>
+              </span>
+            </PortalTooltipButton>
+          </div>
+        ) : null}
       </header>
       <div className="messages">
         {displayMessages.length === 0 ? (
