@@ -239,12 +239,6 @@ export async function POST(request: Request) {
     typeof o.profileId === "string" ? o.profileId.trim() : "";
   const appConversationIdRaw =
     typeof o.conversationId === "string" ? o.conversationId.trim() : "";
-  if (profileIdRaw && !appConversationIdRaw) {
-    return NextResponse.json(
-      { error: "conversationId is required for profile-scoped Letta sends." },
-      { status: 400 },
-    );
-  }
   if (appConversationIdRaw && !profileIdRaw) {
     return NextResponse.json(
       { error: "conversationId requires profileId." },

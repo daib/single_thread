@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
@@ -557,65 +557,70 @@ export function ChatApp() {
   const chatsLoading =
     useServerChats && conversationsLoading && selectedProfileId != null;
 
-  return (
-    <div className="chat-root">
-      <ProfileChatSelect
-        status={status}
-        profiles={profileList}
-        value={selectedProfileId}
-        onChange={onProfileChange}
-        accounts={status === "authenticated" ? accountOptions : undefined}
-        onProfileCreated={status === "authenticated" ? onProfileCreated : undefined}
-        onProfileDeleted={status === "authenticated" ? deleteProfile : undefined}
-      />
+  const profileSidebarHeader = (
+    <ProfileChatSelect
+      status={status}
+      profiles={profileList}
+      value={selectedProfileId}
+      onChange={onProfileChange}
+      accounts={status === "authenticated" ? accountOptions : undefined}
+      onProfileCreated={status === "authenticated" ? onProfileCreated : undefined}
+      onProfileDeleted={status === "authenticated" ? deleteProfile : undefined}
+    />
+  );
 
-      {authLoading ? (
-        <div className="app-shell">
-          <main className="main">
-            <div className="empty-state">Loading…</div>
-          </main>
-        </div>
-      ) : needsProfile ? (
-        <div className="app-shell">
-          <main className="main">
-            <div className="empty-state">
-              Add a profile under Account to start chatting as that persona.
-            </div>
-          </main>
-        </div>
-      ) : chatsLoading ? (
-        <div className="app-shell">
-          <main className="main">
-            <div className="empty-state">Loading conversations…</div>
-          </main>
-        </div>
-      ) : (
-        <div className="app-shell">
-          <ConversationSidebar
-            conversations={conversationsForProfile}
-            selectedId={selectedConvId}
-            onSelect={setSelectedConvId}
-            onDelete={deleteConversation}
-            onNewChat={createNewChat}
-            onBranch={branchConversation}
-            onRename={openRename}
-          />
-          <ChatPanel
-            conversation={active}
-            activeProfile={activeProfile}
-            onSend={sendMessage}
-            onDelete={deleteConversation}
-            onBranch={branchConversation}
-            onRename={openRename}
-          />
-        </div>
-      )}
+  let conversationsPanel: "full" | "loading" | "none" = "full";
+  let mainContent: ReactNode;
+
+  if (authLoading) {
+    conversationsPanel = "none";
+    mainContent = <div className="empty-state">Loading…</div>;
+  } else if (needsProfile) {
+    conversationsPanel = "none";
+    mainContent = (
+      <div className="empty-state">
+        Add a profile under Account to start chatting as that persona.
+      </div>
+    );
+  } else if (chatsLoading) {
+    conversationsPanel = "loading";
+    mainContent = <div className="empty-state">Loading conversations…</div>;
+  } else {
+    conversationsPanel = "full";
+    mainContent = (
+      <ChatPanel
+        conversation={active}
+        activeProfile={activeProfile}
+        onSend={sendMessage}
+        onDelete={deleteConversation}
+        onBranch={branchConversation}
+        onRename={openRename}
+      />
+    );
+  }
+
+  return (
+    <>
+      <div className="app-shell">
+        <ConversationSidebar
+          profileHeader={profileSidebarHeader}
+          conversationsPanel={conversationsPanel}
+          conversations={conversationsPanel === "full" ? conversationsForProfile : []}
+          selectedId={conversationsPanel === "full" ? selectedConvId : null}
+          onSelect={setSelectedConvId}
+          onDelete={deleteConversation}
+          onNewChat={createNewChat}
+          onBranch={branchConversation}
+          onRename={openRename}
+        />
+        <div className="main">{mainContent}</div>
+      </div>
       <RenameConversationDialog
         open={renameConvId !== null}
         initialTitle={renameInitialTitle}
         onClose={() => setRenameConvId(null)}
         onConfirm={applyRename}
       />
-    </div>
+    </>
   );
 }

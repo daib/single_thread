@@ -1,11 +1,18 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ChatMoreMenu } from "@/components/ChatMoreMenu";
 import { formatRelativeTime } from "@/formatTime";
 import { buildConversationTree, type ConversationTreeNode } from "@/lib/conversationTree";
 import type { Conversation } from "@/types";
 
+export type ConversationSidebarConversationsPanel = "full" | "loading" | "none";
+
 interface Props {
+  /** Profile switcher, new/delete profile, account link — shown at top of sidebar. */
+  profileHeader?: ReactNode;
+  /** When not `full`, conversation list is hidden or shows a loading state. */
+  conversationsPanel?: ConversationSidebarConversationsPanel;
   conversations: Conversation[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -84,6 +91,8 @@ function ConversationTreeBranch({
 }
 
 export function ConversationSidebar({
+  profileHeader,
+  conversationsPanel = "full",
   conversations,
   selectedId,
   onSelect,
@@ -93,28 +102,47 @@ export function ConversationSidebar({
   onRename,
 }: Props) {
   const tree = buildConversationTree(conversations);
+  const showConversations = conversationsPanel !== "none";
+  const listLoading = conversationsPanel === "loading";
+  const asideLabel = showConversations ? "Profile and conversations" : "Profile";
 
   return (
-    <aside className="sidebar" aria-label="Conversations">
-      <div className="sidebar-header">
-        <h2 className="sidebar-title">Conversations</h2>
-        <button type="button" className="sidebar-new-chat" onClick={onNewChat}>
-          New chat
-        </button>
-      </div>
-      <ul className="conversation-list">
-        {tree.map((node) => (
-          <ConversationTreeBranch
-            key={node.conv.id}
-            node={node}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            onDelete={onDelete}
-            onBranch={onBranch}
-            onRename={onRename}
-          />
-        ))}
-      </ul>
+    <aside className="sidebar" aria-label={asideLabel}>
+      {profileHeader ? <div className="sidebar-profile-region">{profileHeader}</div> : null}
+      {showConversations ? (
+        <>
+          <div className="sidebar-header">
+            <h2 className="sidebar-title">Conversations</h2>
+            <button
+              type="button"
+              className="sidebar-new-chat"
+              onClick={onNewChat}
+              disabled={listLoading}
+            >
+              New chat
+            </button>
+          </div>
+          {listLoading ? (
+            <div className="conversation-list conversation-list-loading" role="status">
+              Loading conversations…
+            </div>
+          ) : (
+            <ul className="conversation-list">
+              {tree.map((node) => (
+                <ConversationTreeBranch
+                  key={node.conv.id}
+                  node={node}
+                  selectedId={selectedId}
+                  onSelect={onSelect}
+                  onDelete={onDelete}
+                  onBranch={onBranch}
+                  onRename={onRename}
+                />
+              ))}
+            </ul>
+          )}
+        </>
+      ) : null}
     </aside>
   );
 }

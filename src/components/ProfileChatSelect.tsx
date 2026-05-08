@@ -40,7 +40,7 @@ export function ProfileChatSelect({
     Boolean(selectedProfile);
 
   return (
-    <div className="profile-chat-bar">
+    <div className="sidebar-profile-panel">
       <label className="profile-chat-label" htmlFor="chat-profile-select">
         Chatting as
       </label>
