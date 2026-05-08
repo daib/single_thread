@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { DeleteProfileDialog } from "@/components/DeleteProfileDialog";
 import { QuickProfileDialog, type QuickAccountOption } from "@/components/QuickProfileDialog";
@@ -47,30 +46,20 @@ export function ProfileChatSelect({
       {busy ? (
         <span className="profile-chat-status">Loading profiles…</span>
       ) : signedInNoProfiles ? (
-        <span className="profile-chat-hint profile-chat-hint-row">
-          <span className="profile-chat-empty-lede">No profiles yet.</span>
+        <div className="profile-chat-empty-signed-in">
+          <p className="profile-chat-hint">No profiles yet.</p>
           {canQuickCreate ? (
-            <>
-              <button
-                type="button"
-                className="profile-chat-new-profile-btn"
-                onClick={() => setQuickProfileOpen(true)}
-              >
-                New profile
-              </button>
-              <span className="profile-chat-hint-sep" aria-hidden>
-                ·
-              </span>
-              <Link href="/account" className="profile-chat-link">
-                Account settings
-              </Link>
-            </>
+            <button
+              type="button"
+              className="profile-chat-new-profile-btn"
+              onClick={() => setQuickProfileOpen(true)}
+            >
+              New profile
+            </button>
           ) : (
-            <Link href="/account" className="profile-chat-link">
-              Create one in Account
-            </Link>
+            <p className="profile-chat-status">Create an account or open Account below.</p>
           )}
-        </span>
+        </div>
       ) : (
         <div className="profile-chat-controls">
           <select

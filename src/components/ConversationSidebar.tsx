@@ -9,8 +9,10 @@ import type { Conversation } from "@/types";
 export type ConversationSidebarConversationsPanel = "full" | "loading" | "none";
 
 interface Props {
-  /** Profile switcher, new/delete profile, account link — shown at top of sidebar. */
+  /** Profile switcher, new/delete profile — shown at top of sidebar. */
   profileHeader?: ReactNode;
+  /** e.g. link to `/account`, pinned bottom-left of the sidebar. */
+  sidebarFooter?: ReactNode;
   /** When not `full`, conversation list is hidden or shows a loading state. */
   conversationsPanel?: ConversationSidebarConversationsPanel;
   conversations: Conversation[];
@@ -92,6 +94,7 @@ function ConversationTreeBranch({
 
 export function ConversationSidebar({
   profileHeader,
+  sidebarFooter,
   conversationsPanel = "full",
   conversations,
   selectedId,
@@ -109,40 +112,43 @@ export function ConversationSidebar({
   return (
     <aside className="sidebar" aria-label={asideLabel}>
       {profileHeader ? <div className="sidebar-profile-region">{profileHeader}</div> : null}
-      {showConversations ? (
-        <>
-          <div className="sidebar-header">
-            <h2 className="sidebar-title">Conversations</h2>
-            <button
-              type="button"
-              className="sidebar-new-chat"
-              onClick={onNewChat}
-              disabled={listLoading}
-            >
-              New chat
-            </button>
-          </div>
-          {listLoading ? (
-            <div className="conversation-list conversation-list-loading" role="status">
-              Loading conversations…
+      <div className="sidebar-body">
+        {showConversations ? (
+          <>
+            <div className="sidebar-header">
+              <h2 className="sidebar-title">Conversations</h2>
+              <button
+                type="button"
+                className="sidebar-new-chat"
+                onClick={onNewChat}
+                disabled={listLoading}
+              >
+                New chat
+              </button>
             </div>
-          ) : (
-            <ul className="conversation-list">
-              {tree.map((node) => (
-                <ConversationTreeBranch
-                  key={node.conv.id}
-                  node={node}
-                  selectedId={selectedId}
-                  onSelect={onSelect}
-                  onDelete={onDelete}
-                  onBranch={onBranch}
-                  onRename={onRename}
-                />
-              ))}
-            </ul>
-          )}
-        </>
-      ) : null}
+            {listLoading ? (
+              <div className="conversation-list conversation-list-loading" role="status">
+                Loading conversations…
+              </div>
+            ) : (
+              <ul className="conversation-list">
+                {tree.map((node) => (
+                  <ConversationTreeBranch
+                    key={node.conv.id}
+                    node={node}
+                    selectedId={selectedId}
+                    onSelect={onSelect}
+                    onDelete={onDelete}
+                    onBranch={onBranch}
+                    onRename={onRename}
+                  />
+                ))}
+              </ul>
+            )}
+          </>
+        ) : null}
+      </div>
+      {sidebarFooter ? <div className="sidebar-footer">{sidebarFooter}</div> : null}
     </aside>
   );
 }

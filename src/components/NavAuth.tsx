@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
@@ -23,24 +22,5 @@ export function NavAuth() {
     );
   }
 
-  return (
-    <div className="app-nav-auth">
-      <Link href="/account" className="app-nav-link">
-        Account
-      </Link>
-      {session.user.image ? (
-        <Image
-          src={session.user.image}
-          alt=""
-          width={28}
-          height={28}
-          className="app-nav-avatar"
-          unoptimized
-        />
-      ) : null}
-      <span className="app-nav-auth-name" title={session.user.email ?? undefined}>
-        {session.user.name ?? session.user.email ?? "Signed in"}
-      </span>
-    </div>
-  );
+  return null;
 }

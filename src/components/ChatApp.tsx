@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ProfileChatSelect } from "@/components/ProfileChatSelect";
+import { SidebarAccountMenu } from "@/components/SidebarAccountMenu";
 import { RenameConversationDialog } from "@/components/RenameConversationDialog";
 import {
   clearSelectedProfileId,
@@ -569,6 +570,8 @@ export function ChatApp() {
     />
   );
 
+  const sidebarFooter = status === "authenticated" ? <SidebarAccountMenu /> : null;
+
   let conversationsPanel: "full" | "loading" | "none" = "full";
   let mainContent: ReactNode;
 
@@ -604,6 +607,7 @@ export function ChatApp() {
       <div className="app-shell">
         <ConversationSidebar
           profileHeader={profileSidebarHeader}
+          sidebarFooter={sidebarFooter}
           conversationsPanel={conversationsPanel}
           conversations={conversationsPanel === "full" ? conversationsForProfile : []}
           selectedId={conversationsPanel === "full" ? selectedConvId : null}
