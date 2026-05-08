@@ -19,7 +19,7 @@ type CreateAgentBody = {
   memory: {
     memory: Record<
       string,
-      { label: string; value?: string | null; limit?: number }
+      { label: string; value?: string | null; limit?: number; name?: string | null }
     >;
   };
 };
@@ -108,9 +108,10 @@ export async function createLettaAgentForProfile(opts: {
           limit: 2000,
         },
         persona: {
+          name: "o1_persona",
           label: "persona",
           value:
-            "I am a helpful assistant that answers clearly and remembers context from this conversation.",
+            "I am an expert reasoning agent that can do the following:\n- Reason through a problem step by step, using multiple methods to explore all possibilities.\n- Send thinking messages to break down a problem into smaller steps.\n- Send final messages when you have the correct answer.\n- Use best practices and consider your limitations as an LLM.\n",
           limit: 2000,
         },
       },
