@@ -14,6 +14,12 @@ services:
     image: lettaai/letta:latest
     ports:
       - "8283:8283"
+    env_file:
+      - path: .env.letta
+        required: false
+    volumes:
+      - letta_pgdata:/var/lib/postgresql/data
 
 volumes:
   postgres_data:
+  letta_pgdata:

@@ -81,3 +81,12 @@ export function writeSelectedProfileId(profileId: string): void {
     /* ignore */
   }
 }
+
+export function clearSelectedProfileId(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(SELECTED_PROFILE_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}

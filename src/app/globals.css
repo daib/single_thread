@@ -321,6 +321,23 @@ textarea {
   background: var(--accent-soft);
 }
 
+.profile-chat-delete-profile-btn {
+  padding: 0.38rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: transparent;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.profile-chat-delete-profile-btn:hover {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.65);
+}
+
 .quick-profile-dialog-root {
   position: fixed;
   inset: 0;
@@ -466,6 +483,96 @@ textarea {
 
 .quick-profile-submit:disabled {
   opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.delete-profile-dialog-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.delete-profile-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.delete-profile-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 22rem;
+  padding: 1.2rem 1.35rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.delete-profile-dialog-title {
+  margin: 0 0 0.65rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+}
+
+.delete-profile-dialog-body {
+  margin: 0 0 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.delete-profile-dialog-body strong {
+  color: var(--text);
+}
+
+.delete-profile-dialog-handle {
+  font-family: ui-monospace, monospace;
+  color: var(--accent);
+}
+
+.delete-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.delete-profile-cancel {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.86rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.delete-profile-cancel:hover:not(:disabled) {
+  background: var(--bg-active);
+}
+
+.delete-profile-confirm {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: rgba(248, 113, 113, 0.18);
+  color: #fecaca;
+  cursor: pointer;
+}
+
+.delete-profile-confirm:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.28);
+}
+
+.delete-profile-cancel:disabled,
+.delete-profile-confirm:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 

@@ -153,6 +153,7 @@ Ensure `DATABASE_URL` is set in the environment and migrations have been applied
 | `POST` | `/api/profile/:profileId/conversations` | New thread: `{}` or `{ "title", "preview" }`. **Branch:** `{ "mode": "branch", "fromConversationId" }` copies messages from that thread (same profile) |
 | `DELETE` | `/api/conversations/:conversationId` | Delete thread and its messages if you own the profile |
 | `POST` | `/api/conversations/:conversationId/messages` | JSON: `{ "role": "user" \| "assistant", "body" }` — append message; returns updated conversation |
+| `POST` | `/api/letta/send` | JSON: `{ "body": string }` — calls Letta with that text when `LETTA_AGENT_ID` is set; **204** if Letta is disabled (no agent id) |
 
 ## Docker Compose (optional)
 
@@ -160,10 +161,12 @@ Ensure `DATABASE_URL` is set in the environment and migrations have been applied
 docker-compose up -d
 ```
 
+Copy **`.env.letta.example`** to **`.env.letta`** and set at least **`OPENAI_API_KEY`** before starting Letta (Compose loads `.env.letta` when present). Letta stores agent data in the **`letta_pgdata`** volume.
+
 | Service   | Port  | Notes |
 | --------- | ----- | ----- |
 | Postgres  | 5432  | Database `singlethread`, password `postgres` |
-| Letta     | 8283  | [Letta](https://github.com/letta-ai/letta) image (not wired to this UI yet) |
+| Letta     | 8283  | [Letta](https://github.com/letta-ai/letta); chat **Send** forwards text to `POST /v1/agents/{id}/messages` when `LETTA_AGENT_ID` is set (see `.env.example`) |
 
 Stop containers:
 

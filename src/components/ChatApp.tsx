@@ -7,6 +7,7 @@ import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ProfileChatSelect } from "@/components/ProfileChatSelect";
 import { RenameConversationDialog } from "@/components/RenameConversationDialog";
 import {
+  clearSelectedProfileId,
   GUEST_PROFILE_ID,
   hydrateConversationsForProfile,
   readSelectedProfileId,
@@ -212,6 +213,17 @@ export function ChatApp() {
       const profileAtSend = selectedProfileId;
       if (!profileAtSend) return;
 
+      const trimmedForLetta = body.trim();
+      if (trimmedForLetta) {
+        void fetch("/api/letta/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: trimmedForLetta }),
+        }).catch(() => {
+          /* Letta is optional; failures are logged server-side */
+        });
+      }
+
       if (useServerChats) {
         try {
           const res = await fetch(
@@ -322,6 +334,34 @@ export function ChatApp() {
     setSelectedProfileId(profile.id);
     writeSelectedProfileId(profile.id);
   }, []);
+
+  const deleteProfile = useCallback(
+    async (profileId: string) => {
+      if (profileId === GUEST_PROFILE_ID) {
+        throw new Error("Cannot delete this profile.");
+      }
+      const res = await fetch(`/api/profile/${encodeURIComponent(profileId)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok && res.status !== 204) {
+        throw new Error("Could not delete profile.");
+      }
+
+      const nextProfiles = profileList.filter((p) => p.id !== profileId);
+      setProfileList(nextProfiles);
+      setConversations((prev) => prev.filter((c) => c.profileId !== profileId));
+
+      if (selectedProfileId === profileId) {
+        const pick = nextProfiles[0]?.id ?? null;
+        setSelectedProfileId(pick);
+        if (pick) writeSelectedProfileId(pick);
+        else clearSelectedProfileId();
+      }
+
+      setRenameConvId(null);
+    },
+    [profileList, selectedProfileId],
+  );
 
   const deleteConversation = useCallback(
     async (conversationId: string) => {
@@ -489,6 +529,7 @@ export function ChatApp() {
         onChange={onProfileChange}
         accounts={status === "authenticated" ? accountOptions : undefined}
         onProfileCreated={status === "authenticated" ? onProfileCreated : undefined}
+        onProfileDeleted={status === "authenticated" ? deleteProfile : undefined}
       />
 
       {authLoading ? (
