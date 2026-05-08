@@ -147,10 +147,11 @@ export async function createLettaAgentForProfile(opts: {
 
 /**
  * Removes an agent from the Letta server. Best-effort: logs failures and does not throw.
+ * @returns true if deleted or already absent (404).
  */
-export async function deleteLettaAgentById(agentId: string): Promise<void> {
+export async function deleteLettaAgentById(agentId: string): Promise<boolean> {
   const trimmed = agentId.trim();
-  if (!trimmed) return;
+  if (!trimmed) return true;
 
   loadLettaEnvFile();
   const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
@@ -167,16 +168,19 @@ export async function deleteLettaAgentById(agentId: string): Promise<void> {
         },
       },
     );
-    if (!res.ok) {
-      const text = await res.text();
-      console.warn(
-        "[deleteLettaAgentById]",
-        trimmed,
-        res.status,
-        text.slice(0, 400),
-      );
+    if (res.ok || res.status === 404) {
+      return true;
     }
+    const text = await res.text();
+    console.warn(
+      "[deleteLettaAgentById]",
+      trimmed,
+      res.status,
+      text.slice(0, 400),
+    );
+    return false;
   } catch (e) {
     console.warn("[deleteLettaAgentById]", trimmed, e);
+    return false;
   }
 }
