@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { deleteLettaAgentById } from "@/lib/lettaCreateProfileAgent";
 import { prisma } from "@/lib/prisma";
 import { requireOwnedProfile } from "@/lib/profileAccess";
 
@@ -24,8 +25,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });
   }
 
+  const lettaAgentId = profile.lettaAgentId?.trim();
+
   try {
     await prisma.appProfile.delete({ where: { id: profileId } });
+    if (lettaAgentId) {
+      await deleteLettaAgentById(lettaAgentId);
+    }
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     console.error(e);

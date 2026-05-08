@@ -144,3 +144,39 @@ export async function createLettaAgentForProfile(opts: {
     return null;
   }
 }
+
+/**
+ * Removes an agent from the Letta server. Best-effort: logs failures and does not throw.
+ */
+export async function deleteLettaAgentById(agentId: string): Promise<void> {
+  const trimmed = agentId.trim();
+  if (!trimmed) return;
+
+  loadLettaEnvFile();
+  const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
+  const base = baseRaw.replace(/\/$/, "");
+  const apiKey = process.env.LETTA_API_KEY?.trim() || null;
+
+  try {
+    const res = await fetch(
+      `${base}/v1/agents/${encodeURIComponent(trimmed)}`,
+      {
+        method: "DELETE",
+        headers: {
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+      },
+    );
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(
+        "[deleteLettaAgentById]",
+        trimmed,
+        res.status,
+        text.slice(0, 400),
+      );
+    }
+  } catch (e) {
+    console.warn("[deleteLettaAgentById]", trimmed, e);
+  }
+}
