@@ -698,8 +698,10 @@ textarea {
 }
 
 .sidebar-account-menu-item {
-  display: block;
+  display: flex;
   width: 100%;
+  align-items: center;
+  gap: 0.55rem;
   text-align: left;
   padding: 0.5rem 0.65rem;
   font-size: 0.86rem;
@@ -713,11 +715,28 @@ textarea {
   font-family: inherit;
 }
 
+.sidebar-account-menu-item-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  line-height: 0;
+}
+
+.sidebar-account-menu-item-icon svg {
+  display: block;
+}
+
 .sidebar-account-menu-item:hover {
   background: var(--bg-hover);
 }
 
 .sidebar-account-menu-item-danger {
+  color: #fca5a5;
+}
+
+.sidebar-account-menu-item-danger .sidebar-account-menu-item-icon {
   color: #fca5a5;
 }
 
