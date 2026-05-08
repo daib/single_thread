@@ -9,11 +9,17 @@ interface Props {
   activeProfile?: ChatProfileOption | null;
   onSend: (conversationId: string, body: string) => void;
   onDelete: (conversationId: string) => void;
-  onBranch: (conversationId: string) => void;
+  onBranch: (conversationId: string, upToMessageId?: string) => void;
   onRename: (conversationId: string) => void;
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({
+  message,
+  onBranchHere,
+}: {
+  message: Message;
+  onBranchHere: (messageId: string) => void;
+}) {
   const isUser = message.role === "user";
   return (
     <div
@@ -22,7 +28,16 @@ function MessageBubble({ message }: { message: Message }) {
       aria-label={`${message.role} message`}
     >
       <div className="role-label">{isUser ? "You" : "Assistant"}</div>
-      <div className="bubble">{message.body}</div>
+      <div className="message-bubble-row">
+        <div className="bubble">{message.body}</div>
+        <div className="message-actions-wrap">
+          <ChatMoreMenu
+            conversationLabel={`${isUser ? "Your" : "Assistant"} message`}
+            variant="message"
+            onBranch={() => onBranchHere(message.id)}
+          />
+        </div>
+      </div>
       <time className="timestamp" dateTime={message.sentAt}>
         {formatClock(message.sentAt)}
       </time>
@@ -129,7 +144,11 @@ export function ChatPanel({
           <p className="messages-empty-hint">Send a message below to start this chat.</p>
         ) : null}
         {displayMessages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
+          <MessageBubble
+            key={m.id}
+            message={m}
+            onBranchHere={(messageId) => onBranch(conversation.id, messageId)}
+          />
         ))}
         <div ref={bottomRef} />
       </div>

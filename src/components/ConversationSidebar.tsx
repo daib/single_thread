@@ -11,7 +11,7 @@ interface Props {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onNewChat: () => void;
-  onBranch: (id: string) => void;
+  onBranch: (id: string, upToMessageId?: string) => void;
   onRename: (id: string) => void;
 }
 
@@ -27,7 +27,7 @@ function ConversationTreeBranch({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
-  onBranch: (id: string) => void;
+  onBranch: (id: string, upToMessageId?: string) => void;
   onRename: (id: string) => void;
 }) {
   const { conv, children } = node;

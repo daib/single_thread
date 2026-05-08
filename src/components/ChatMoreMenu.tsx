@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from "react";
 type Props = {
   /** Shown to screen readers on the ⋮ trigger (e.g. chat title). */
   conversationLabel: string;
-  onDelete: () => void;
+  onDelete?: () => void;
   /** Fork this thread into a new conversation (omit when there is nothing to copy). */
   onBranch?: () => void;
   /** Open rename flow for this conversation. */
   onRename?: () => void;
-  /** Wider touch target in the main chat header. */
-  variant?: "sidebar" | "header";
+  /** Wider touch target in the main chat header; compact on message rows. */
+  variant?: "sidebar" | "header" | "message";
 };
 
 export function ChatMoreMenu({
@@ -42,7 +42,11 @@ export function ChatMoreMenu({
   }, [open]);
 
   const triggerClass =
-    variant === "header" ? "chat-more-trigger chat-more-trigger-header" : "chat-more-trigger";
+    variant === "header"
+      ? "chat-more-trigger chat-more-trigger-header"
+      : variant === "message"
+        ? "chat-more-trigger chat-more-trigger-message"
+        : "chat-more-trigger";
 
   return (
     <div className="chat-more-wrap" ref={wrapRef}>
@@ -90,21 +94,23 @@ export function ChatMoreMenu({
                 setOpen(false);
               }}
             >
-              Branch
+              {variant === "message" ? "Branch from here" : "Branch"}
             </button>
           ) : null}
-          <button
-            type="button"
-            className="chat-more-item chat-more-item-danger"
-            role="menuitem"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-              setOpen(false);
-            }}
-          >
-            Delete
-          </button>
+          {onDelete ? (
+            <button
+              type="button"
+              className="chat-more-item chat-more-item-danger"
+              role="menuitem"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+                setOpen(false);
+              }}
+            >
+              Delete
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

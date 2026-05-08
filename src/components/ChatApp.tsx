@@ -490,7 +490,7 @@ export function ChatApp() {
   }, [selectedProfileId, useServerChats]);
 
   const branchConversation = useCallback(
-    async (conversationId: string) => {
+    async (conversationId: string, upToMessageId?: string) => {
       const pid = selectedProfileId;
       if (!pid) return;
 
@@ -501,6 +501,7 @@ export function ChatApp() {
           body: JSON.stringify({
             mode: "branch",
             fromConversationId: conversationId,
+            ...(upToMessageId ? { upToMessageId } : {}),
           }),
         });
         const data = (await res.json()) as Conversation;
@@ -515,18 +516,31 @@ export function ChatApp() {
       );
       if (!source || source.messages.length === 0) return;
 
+      let msgs = source.messages;
+      if (upToMessageId) {
+        const cut = msgs.findIndex((m) => m.id === upToMessageId);
+        if (cut < 0) return;
+        msgs = msgs.slice(0, cut + 1);
+      }
+      if (msgs.length === 0) return;
+
       const now = new Date().toISOString();
       const id = nextId("c");
       const truncated =
         source.title.length > 52 ? `${source.title.slice(0, 52)}…` : source.title;
+      const lastBody = msgs[msgs.length - 1]?.body ?? "";
       const branched: Conversation = {
         id,
         profileId: pid,
         branchOfId: source.id,
         title: truncated,
-        preview: source.preview,
+        preview: upToMessageId
+          ? lastBody.length > 0
+            ? lastBody.slice(0, 500)
+            : source.preview
+          : source.preview || (lastBody.length > 0 ? lastBody.slice(0, 500) : ""),
         updatedAt: now,
-        messages: source.messages.map((m) => ({
+        messages: msgs.map((m) => ({
           ...m,
           id: nextId("m"),
         })),

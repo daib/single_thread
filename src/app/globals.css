@@ -721,6 +721,12 @@ textarea {
   background: var(--bg-elevated);
 }
 
+.chat-more-trigger-message {
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  padding: 0.15rem 0.2rem;
+}
+
 .chat-more-trigger:hover {
   background: var(--bg-hover);
   color: var(--text);
@@ -995,6 +1001,20 @@ textarea {
   align-items: flex-end;
 }
 
+.message-bubble-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: min(640px, 100%);
+  min-width: 0;
+}
+
+.message-bubble-row .bubble {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .bubble {
   padding: 0.65rem 0.9rem;
   border-radius: 14px;
@@ -1032,6 +1052,28 @@ textarea {
   color: var(--text-muted);
   margin-top: 0.35rem;
   padding: 0 0.15rem;
+}
+
+.message-actions-wrap {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.message-row:hover .message-actions-wrap,
+.message-row:focus-within .message-actions-wrap {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .message-actions-wrap {
+    opacity: 1;
+  }
+}
+
+.message-actions-wrap .chat-more-dropdown {
+  right: 0;
+  left: auto;
 }
 
 .composer {

@@ -81,6 +81,10 @@ export async function POST(
         return NextResponse.json({ error: "fromConversationId required." }, { status: 400 });
       }
 
+      const upToMessageIdRaw =
+        typeof o.upToMessageId === "string" ? o.upToMessageId.trim() : "";
+      const upToMessageId = upToMessageIdRaw.length > 0 ? upToMessageIdRaw : null;
+
       const source = await prisma.chatConversation.findFirst({
         where: { id: fromId, profileId },
         include: { messages: { orderBy: { sentAt: "asc" } } },
@@ -92,19 +96,46 @@ export async function POST(
         );
       }
 
+      const ordered = source.messages;
+      let messagesToCopy = ordered;
+      if (upToMessageId) {
+        const cut = ordered.findIndex((m: (typeof ordered)[number]) => m.id === upToMessageId);
+        if (cut < 0) {
+          return NextResponse.json(
+            { error: "upToMessageId not found in source conversation." },
+            { status: 400 },
+          );
+        }
+        messagesToCopy = ordered.slice(0, cut + 1);
+      }
+
+      if (messagesToCopy.length === 0) {
+        return NextResponse.json(
+          { error: "No messages to copy for this branch." },
+          { status: 400 },
+        );
+      }
+
       const truncated =
         source.title.length > 52 ? `${source.title.slice(0, 52)}…` : source.title;
+      const isPartialBranch = Boolean(upToMessageId);
+      const lastBody = messagesToCopy[messagesToCopy.length - 1]?.body ?? "";
+      const branchPreview = isPartialBranch
+        ? lastBody.length > 0
+          ? lastBody.slice(0, 500)
+          : source.preview || ""
+        : source.preview || (lastBody.length > 0 ? lastBody.slice(0, 500) : "");
 
       const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const newConv = await tx.chatConversation.create({
           data: {
             profileId,
             title: truncated,
-            preview: source.preview || "",
+            preview: branchPreview,
             branchOfId: source.id,
           },
         });
-        for (const m of source.messages) {
+        for (const m of messagesToCopy) {
           await tx.chatMessage.create({
             data: {
               conversationId: newConv.id,
@@ -122,7 +153,8 @@ export async function POST(
 
       const agentId =
         profile.lettaAgentId?.trim() || process.env.LETTA_AGENT_ID?.trim();
-      if (source.lettaConversationId?.trim()) {
+      /** Partial history must not fork Letta (fork would keep full parent context). */
+      if (!isPartialBranch && source.lettaConversationId?.trim()) {
         const forked = await forkLettaConversation(source.lettaConversationId);
         if (forked.ok) {
           await prisma.chatConversation.update({
@@ -137,7 +169,11 @@ export async function POST(
         await ensureChatLettaConversationId(created.id, agentId);
       }
 
-      return NextResponse.json(mapConversation(created, profileId), { status: 201 });
+      const fresh = await prisma.chatConversation.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { messages: { orderBy: { sentAt: "asc" } } },
+      });
+      return NextResponse.json(mapConversation(fresh, profileId), { status: 201 });
     }
 
     const title =
