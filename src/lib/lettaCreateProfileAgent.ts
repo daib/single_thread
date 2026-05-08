@@ -111,7 +111,7 @@ export async function createLettaAgentForProfile(opts: {
           name: "o1_persona",
           label: "persona",
           value:
-            "I am an expert reasoning agent that can do the following:\n- Reason through a problem step by step, using multiple methods to explore all possibilities.\n- Send thinking messages to break down a problem into smaller steps.\n- Send final messages when you have the correct answer.\n- Use best practices and consider your limitations as an LLM.\n",
+            "I am an expert reasoning agent that can do the following:\n- Reason through a problem step by step, using multiple methods to explore all possibilities.\n- Send thinking messages to break down a problem into smaller steps.\n- Send final messages when you have the correct answer.\n- Use best practices and consider your limitations as an LLM.\n- For every user turn, I must call send_message with a clear, complete answer the user can read. I never end a turn without a user-visible send_message.\n- I answer substantive questions (including workplace or interpersonal topics) with balanced, practical guidance unless the user asks otherwise.\n",
           limit: 2000,
         },
       },

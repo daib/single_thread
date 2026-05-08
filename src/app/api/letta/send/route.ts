@@ -5,12 +5,14 @@ import { auth } from "@/auth";
 import { resolveLettaAssistantReply } from "@/lib/resolveLettaAssistantReply";
 import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
 import { requireOwnedProfile } from "@/lib/profileAccess";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 loadLettaEnvFile();
 
 const LETTA_DEBUG_JSON_MAX = 24_000;
+const PROFILE_HISTORY_MAX_CHARS = 16_000;
 
 function jsonSnippet(value: unknown, maxChars: number): string {
   try {
@@ -53,6 +55,47 @@ function jsonErrorBodyForLog(err: APIError): string {
   }
 }
 
+function trimHistoryTail(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(text.length - maxChars);
+}
+
+async function buildProfileHistoryContext(profileId: string): Promise<string | null> {
+  const rows = await prisma.chatConversation.findMany({
+    where: { profileId },
+    orderBy: [{ updatedAt: "asc" }],
+    include: { messages: { orderBy: { sentAt: "asc" } } },
+  });
+  if (rows.length === 0) return null;
+
+  const chunks: string[] = [];
+  for (const conv of rows) {
+    if (conv.messages.length === 0) continue;
+    chunks.push(`Conversation: ${conv.title}`);
+    for (const m of conv.messages) {
+      chunks.push(`${m.role === "assistant" ? "Assistant" : "User"}: ${m.body}`);
+    }
+    chunks.push("");
+  }
+  if (chunks.length === 0) return null;
+
+  const maxCharsRaw = Number.parseInt(
+    process.env.LETTA_PROFILE_HISTORY_MAX_CHARS?.trim() ?? "",
+    10,
+  );
+  const maxChars =
+    Number.isFinite(maxCharsRaw) && maxCharsRaw > 500
+      ? maxCharsRaw
+      : PROFILE_HISTORY_MAX_CHARS;
+
+  const full = chunks.join("\n").trim();
+  const bounded = trimHistoryTail(full, maxChars);
+  return [
+    "Background from previous conversations with this profile (most recent tail):",
+    bounded,
+  ].join("\n");
+}
+
 function isAgentMissingError(lettaStatus: number, detail: string): boolean {
   if (lettaStatus === 404) return true;
   if (lettaStatus === 500 && /agent does not exist|agent not found/i.test(detail)) return true;
@@ -82,6 +125,7 @@ function lettaErrorResponse(lettaStatus: number, detail: string) {
 }
 
 export async function POST(request: Request) {
+  const startedAtMs = Date.now();
   const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
   const base = baseRaw.replace(/\/$/, "");
 
@@ -102,6 +146,7 @@ export async function POST(request: Request) {
     typeof o.profileId === "string" ? o.profileId.trim() : "";
 
   let agentId: string | undefined;
+  let outboundUserText = bodyText;
 
   if (profileIdRaw) {
     const session = await auth();
@@ -117,6 +162,15 @@ export async function POST(request: Request) {
     }
     agentId =
       profile.lettaAgentId?.trim() || process.env.LETTA_AGENT_ID?.trim();
+
+    try {
+      const historyContext = await buildProfileHistoryContext(profileIdRaw);
+      if (historyContext) {
+        outboundUserText = `${historyContext}\n\nCurrent user message:\n${bodyText}`;
+      }
+    } catch (e) {
+      console.warn("[letta/send] could not build profile history context:", e);
+    }
   } else {
     agentId = process.env.LETTA_AGENT_ID?.trim();
   }
@@ -124,6 +178,9 @@ export async function POST(request: Request) {
   if (!agentId) {
     return new NextResponse(null, { status: 204 });
   }
+
+  // MemGPT-style agents only surface user-visible text via send_message; nudge so turns don’t end with only internal steps.
+  const outboundWithToolNudge = `${outboundUserText}\n\n[Instruction for agent: respond to the user by calling send_message with your full answer. Do not end the turn without a user-visible message.]`;
 
   const client = new Letta({
     baseURL: base,
@@ -136,7 +193,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "user",
-          text: bodyText,
+          text: outboundWithToolNudge,
         } as unknown as MessageCreate,
       ],
       streaming: false,
@@ -146,7 +203,10 @@ export async function POST(request: Request) {
 
     console.log("[letta/send] Letta POST .../messages create response:", jsonSnippet(payload, LETTA_DEBUG_JSON_MAX));
 
-    const reply = await resolveLettaAssistantReply(client, agentId, payload);
+    const reply = await resolveLettaAssistantReply(client, agentId, payload, {
+      currentUserText: outboundWithToolNudge,
+      startedAtMs,
+    });
     if (reply == null && payload && typeof payload === "object") {
       const msgs = (payload as { messages?: unknown }).messages;
       console.warn("[letta/send] no assistant text after list fallback — create messages[]:");

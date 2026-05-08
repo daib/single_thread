@@ -26,13 +26,12 @@ export function getLastAssistantBeforeTrailingUser(messages: Message[]): string 
 }
 
 /**
- * Show / persist an assistant bubble only when there is new user-visible text.
- * Drops Python None, empty replies, and repeats of the previous assistant line when Letta adds no new message.
+ * Show / persist an assistant bubble when there is user-visible text.
+ * Drops Python None / null placeholders and empty replies only (no duplicate suppression).
  */
-export function shouldShowAssistantReply(nextBody: string, previousAssistantBody?: string | null): boolean {
+export function shouldShowAssistantReply(nextBody: string, _previousAssistantBody?: string | null): boolean {
   const t = nextBody.trim();
   if (!t) return false;
   if (/^(none|null)$/i.test(t)) return false;
-  if (previousAssistantBody != null && messagesBodiesDuplicate(previousAssistantBody, t)) return false;
   return true;
 }

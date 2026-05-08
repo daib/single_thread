@@ -142,6 +142,23 @@ export function extractLettaAssistantText(payload: unknown): string | null {
     }
   }
 
+  // When the model stops without send_message, self-hosted Letta often only persists internal_monologue.
+  const maxInternalChars = 6_000;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m || typeof m !== "object") continue;
+    const msg = m as Record<string, unknown>;
+    if (isSystemLikeMessage(msg)) continue;
+    const mt = typeof msg.message_type === "string" ? msg.message_type.toLowerCase() : "";
+    if (mt !== "internal_monologue") continue;
+    if (typeof msg.internal_monologue === "string") {
+      const ok = sanitizeAssistantCandidate(msg.internal_monologue);
+      if (ok) {
+        return ok.length > maxInternalChars ? `${ok.slice(0, maxInternalChars)}…` : ok;
+      }
+    }
+  }
+
   return null;
 }
 

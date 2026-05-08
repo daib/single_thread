@@ -14,10 +14,6 @@ import {
   saveConversations,
   writeSelectedProfileId,
 } from "@/lib/chatStorage";
-import {
-  getLastAssistantBeforeTrailingUser,
-  shouldShowAssistantReply,
-} from "@/lib/lettaAssistantDedupe";
 import { requestLettaReply } from "@/lib/requestLettaReply";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
 
@@ -239,13 +235,29 @@ export function ChatApp() {
             );
           }
 
-          const priorAssist = data.conversation
-            ? getLastAssistantBeforeTrailingUser(data.conversation.messages)
-            : undefined;
           const assistantBody = await requestLettaReply(trimmed, profileAtSend);
-          if (!shouldShowAssistantReply(assistantBody, priorAssist)) {
+          if (!assistantBody.trim()) {
             return;
           }
+
+          const replyAt = new Date().toISOString();
+          const optimisticReply: Message = {
+            id: nextId("m"),
+            role: "assistant",
+            body: assistantBody,
+            sentAt: replyAt,
+          };
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
+              return {
+                ...c,
+                messages: [...c.messages, optimisticReply],
+                preview: assistantBody,
+                updatedAt: replyAt,
+              };
+            }),
+          );
 
           const res2 = await fetch(
             `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
@@ -258,10 +270,12 @@ export function ChatApp() {
               }),
             },
           );
-          const data2 = (await res2.json()) as { conversation?: Conversation };
+          const data2 = (await res2.json().catch(() => ({}))) as { conversation?: Conversation };
           if (res2.ok && data2.conversation) {
             setConversations((prev) =>
-              prev.map((c) => (c.id === conversationId ? data2.conversation! : c)),
+              prev.map((c) =>
+                c.id === conversationId && c.profileId === profileAtSend ? data2.conversation! : c,
+              ),
             );
           }
         } catch {
@@ -278,13 +292,11 @@ export function ChatApp() {
         sentAt: now,
       };
 
-      let priorAssistForDedupe: string | undefined;
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
           const wasEmpty = c.messages.length === 0;
           const messages = [...c.messages, userMsg];
-          priorAssistForDedupe = getLastAssistantBeforeTrailingUser(messages);
           let title = c.title;
           if (wasEmpty && c.title === "New chat" && trimmed.length > 0) {
             title = trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
@@ -301,7 +313,7 @@ export function ChatApp() {
       );
 
       const assistantBody = await requestLettaReply(trimmed);
-      if (!shouldShowAssistantReply(assistantBody, priorAssistForDedupe)) {
+      if (!assistantBody.trim()) {
         return;
       }
       const replyAt = new Date().toISOString();
