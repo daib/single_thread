@@ -55,6 +55,49 @@ function jsonErrorBodyForLog(err: APIError): string {
   }
 }
 
+function missingRequiredField(detailRaw: string, fieldName: string): boolean {
+  if (!/field required/i.test(detailRaw)) return false;
+  const escaped = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`['"]${escaped}['"]`, "i").test(detailRaw);
+}
+
+/**
+ * Letta servers differ on user message shape: some require `text`, newer schema requires `content`.
+ * Try modern `content` first, then retry `text` only when validation says `text` is required.
+ */
+async function sendAgentMessageCompatible(
+  client: Letta,
+  agentId: string,
+  userText: string,
+) {
+  try {
+    return await client.agents.messages.create(agentId, {
+      messages: [
+        {
+          role: "user",
+          content: userText,
+        } as unknown as MessageCreate,
+      ],
+      streaming: false,
+      use_assistant_message: true,
+    });
+  } catch (e) {
+    if (!(e instanceof APIError) || e.status !== 422) throw e;
+    const detailRaw = jsonErrorBodyForLog(e);
+    if (!missingRequiredField(detailRaw, "text")) throw e;
+    return client.agents.messages.create(agentId, {
+      messages: [
+        {
+          role: "user",
+          text: userText,
+        } as unknown as MessageCreate,
+      ],
+      streaming: false,
+      use_assistant_message: true,
+    });
+  }
+}
+
 function trimHistoryTail(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
   return text.slice(text.length - maxChars);
@@ -197,18 +240,11 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Self-hosted Letta (Docker image) validates user messages with `text`; `content` is rejected (422).
-    const payload = await client.agents.messages.create(agentId, {
-      messages: [
-        {
-          role: "user",
-          text: outboundWithToolNudge,
-        } as unknown as MessageCreate,
-      ],
-      streaming: false,
-      // Legacy / MemGPT agents: ask Letta to surface `send_message` tool calls as assistant messages in JSON.
-      use_assistant_message: true,
-    });
+    const payload = await sendAgentMessageCompatible(
+      client,
+      agentId,
+      outboundWithToolNudge,
+    );
 
     console.log("[letta/send] Letta POST .../messages create response:", jsonSnippet(payload, LETTA_DEBUG_JSON_MAX));
 
