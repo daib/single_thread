@@ -8,6 +8,8 @@ type Props = {
   onDelete: () => void;
   /** Fork this thread into a new conversation (omit when there is nothing to copy). */
   onBranch?: () => void;
+  /** Open rename flow for this conversation. */
+  onRename?: () => void;
   /** Wider touch target in the main chat header. */
   variant?: "sidebar" | "header";
 };
@@ -16,6 +18,7 @@ export function ChatMoreMenu({
   conversationLabel,
   onDelete,
   onBranch,
+  onRename,
   variant = "sidebar",
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -62,6 +65,20 @@ export function ChatMoreMenu({
       </button>
       {open ? (
         <div className="chat-more-dropdown" role="menu">
+          {onRename ? (
+            <button
+              type="button"
+              className="chat-more-item"
+              role="menuitem"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename();
+                setOpen(false);
+              }}
+            >
+              Rename
+            </button>
+          ) : null}
           {onBranch ? (
             <button
               type="button"

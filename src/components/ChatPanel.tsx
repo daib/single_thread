@@ -9,6 +9,7 @@ interface Props {
   onSend: (conversationId: string, body: string) => void;
   onDelete: (conversationId: string) => void;
   onBranch: (conversationId: string) => void;
+  onRename: (conversationId: string) => void;
 }
 
 function MessageBubble({ message }: { message: Message }) {
@@ -28,7 +29,14 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-export function ChatPanel({ conversation, activeProfile, onSend, onDelete, onBranch }: Props) {
+export function ChatPanel({
+  conversation,
+  activeProfile,
+  onSend,
+  onDelete,
+  onBranch,
+  onRename,
+}: Props) {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +94,7 @@ export function ChatPanel({ conversation, activeProfile, onSend, onDelete, onBra
         <ChatMoreMenu
           conversationLabel={conversation.title}
           variant="header"
+          onRename={() => onRename(conversation.id)}
           onDelete={() => onDelete(conversation.id)}
           onBranch={
             conversation.messages.length > 0

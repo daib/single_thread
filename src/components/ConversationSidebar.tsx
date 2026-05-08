@@ -12,6 +12,7 @@ interface Props {
   onDelete: (id: string) => void;
   onNewChat: () => void;
   onBranch: (id: string) => void;
+  onRename: (id: string) => void;
 }
 
 function ConversationTreeBranch({
@@ -20,12 +21,14 @@ function ConversationTreeBranch({
   onSelect,
   onDelete,
   onBranch,
+  onRename,
 }: {
   node: ConversationTreeNode;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onBranch: (id: string) => void;
+  onRename: (id: string) => void;
 }) {
   const { conv, children } = node;
   const active = conv.id === selectedId;
@@ -56,6 +59,7 @@ function ConversationTreeBranch({
         <ChatMoreMenu
           conversationLabel={conv.title}
           variant="sidebar"
+          onRename={() => onRename(conv.id)}
           onDelete={() => onDelete(conv.id)}
           onBranch={conv.messages.length > 0 ? () => onBranch(conv.id) : undefined}
         />
@@ -70,6 +74,7 @@ function ConversationTreeBranch({
               onSelect={onSelect}
               onDelete={onDelete}
               onBranch={onBranch}
+              onRename={onRename}
             />
           ))}
         </ul>
@@ -85,6 +90,7 @@ export function ConversationSidebar({
   onDelete,
   onNewChat,
   onBranch,
+  onRename,
 }: Props) {
   const tree = buildConversationTree(conversations);
 
@@ -105,6 +111,7 @@ export function ConversationSidebar({
             onSelect={onSelect}
             onDelete={onDelete}
             onBranch={onBranch}
+            onRename={onRename}
           />
         ))}
       </ul>

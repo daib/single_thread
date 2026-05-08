@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { ProfileChatSelect } from "@/components/ProfileChatSelect";
+import { RenameConversationDialog } from "@/components/RenameConversationDialog";
 import {
   GUEST_PROFILE_ID,
   hydrateConversationsForProfile,
@@ -27,6 +28,7 @@ export function ChatApp() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [renameConvId, setRenameConvId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") {
@@ -177,6 +179,14 @@ export function ChatApp() {
     [conversationsForProfile, selectedConvId],
   );
 
+  const renameInitialTitle = useMemo(() => {
+    if (!renameConvId || !selectedProfileId) return "";
+    return (
+      conversations.find((c) => c.id === renameConvId && c.profileId === selectedProfileId)?.title ??
+      ""
+    );
+  }, [renameConvId, conversations, selectedProfileId]);
+
   const useServerChats =
     status === "authenticated" &&
     selectedProfileId != null &&
@@ -302,14 +312,63 @@ export function ChatApp() {
         setConversations((prev) =>
           prev.filter((c) => !(c.id === conversationId && c.profileId === pid)),
         );
+        setRenameConvId((prev) => (prev === conversationId ? null : prev));
         return;
       }
 
       setConversations((prev) =>
         prev.filter((c) => !(c.id === conversationId && c.profileId === pid)),
       );
+      setRenameConvId((prev) => (prev === conversationId ? null : prev));
     },
     [selectedProfileId, useServerChats],
+  );
+
+  const openRename = useCallback(
+    (conversationId: string) => {
+      const pid = selectedProfileId;
+      if (!pid) return;
+      const c = conversations.find((x) => x.id === conversationId && x.profileId === pid);
+      if (!c) return;
+      setRenameConvId(conversationId);
+    },
+    [selectedProfileId, conversations],
+  );
+
+  const applyRename = useCallback(
+    async (title: string) => {
+      const pid = selectedProfileId;
+      if (!pid || !renameConvId) return;
+      const conversationId = renameConvId;
+
+      if (useServerChats) {
+        const res = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        });
+        const data = (await res.json()) as { conversation?: Conversation; error?: string };
+        if (!res.ok || !data.conversation) return;
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === conversationId && c.profileId === pid ? data.conversation! : c,
+          ),
+        );
+        setRenameConvId(null);
+        return;
+      }
+
+      const now = new Date().toISOString();
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === conversationId && c.profileId === pid
+            ? { ...c, title, updatedAt: now }
+            : c,
+        ),
+      );
+      setRenameConvId(null);
+    },
+    [selectedProfileId, useServerChats, renameConvId],
   );
 
   const createNewChat = useCallback(async () => {
@@ -435,6 +494,7 @@ export function ChatApp() {
             onDelete={deleteConversation}
             onNewChat={createNewChat}
             onBranch={branchConversation}
+            onRename={openRename}
           />
           <ChatPanel
             conversation={active}
@@ -442,9 +502,16 @@ export function ChatApp() {
             onSend={sendMessage}
             onDelete={deleteConversation}
             onBranch={branchConversation}
+            onRename={openRename}
           />
         </div>
       )}
+      <RenameConversationDialog
+        open={renameConvId !== null}
+        initialTitle={renameInitialTitle}
+        onClose={() => setRenameConvId(null)}
+        onConfirm={applyRename}
+      />
     </div>
   );
 }
