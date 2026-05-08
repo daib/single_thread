@@ -242,7 +242,7 @@ export function ChatApp() {
           const priorAssist = data.conversation
             ? getLastAssistantBeforeTrailingUser(data.conversation.messages)
             : undefined;
-          const assistantBody = await requestLettaReply(trimmed);
+          const assistantBody = await requestLettaReply(trimmed, profileAtSend);
           if (!shouldShowAssistantReply(assistantBody, priorAssist)) {
             return;
           }

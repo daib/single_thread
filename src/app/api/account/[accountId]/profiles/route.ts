@@ -1,7 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { createLettaAgentForProfile } from "@/lib/lettaCreateProfileAgent";
+import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
 import { prisma } from "@/lib/prisma";
+
+loadLettaEnvFile();
 
 export const runtime = "nodejs";
 
@@ -68,7 +72,20 @@ export async function POST(
         bio: parsed.bio,
       },
     });
-    return NextResponse.json(profile, { status: 201 });
+
+    const lettaId = await createLettaAgentForProfile({
+      displayName: parsed.displayName,
+      profileId: profile.id,
+    });
+    const saved =
+      lettaId != null
+        ? await prisma.appProfile.update({
+            where: { id: profile.id },
+            data: { lettaAgentId: lettaId },
+          })
+        : profile;
+
+    return NextResponse.json(saved, { status: 201 });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return NextResponse.json(

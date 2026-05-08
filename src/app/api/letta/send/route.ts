@@ -1,8 +1,10 @@
 import type { MessageCreate } from "@letta-ai/letta-client/resources/agents/agents";
 import { APIConnectionError, APIError, Letta } from "@letta-ai/letta-client";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { resolveLettaAssistantReply } from "@/lib/resolveLettaAssistantReply";
 import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
+import { requireOwnedProfile } from "@/lib/profileAccess";
 
 export const runtime = "nodejs";
 
@@ -80,7 +82,6 @@ function lettaErrorResponse(lettaStatus: number, detail: string) {
 }
 
 export async function POST(request: Request) {
-  const agentId = process.env.LETTA_AGENT_ID?.trim();
   const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
   const base = baseRaw.replace(/\/$/, "");
 
@@ -95,6 +96,29 @@ export async function POST(request: Request) {
   const bodyText = typeof o.body === "string" ? o.body.trim() : "";
   if (!bodyText) {
     return NextResponse.json({ error: "Non-empty body string required." }, { status: 400 });
+  }
+
+  const profileIdRaw =
+    typeof o.profileId === "string" ? o.profileId.trim() : "";
+
+  let agentId: string | undefined;
+
+  if (profileIdRaw) {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Sign in required to use a profile-scoped Letta agent." },
+        { status: 401 },
+      );
+    }
+    const profile = await requireOwnedProfile(profileIdRaw, session.user.id);
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found." }, { status: 404 });
+    }
+    agentId =
+      profile.lettaAgentId?.trim() || process.env.LETTA_AGENT_ID?.trim();
+  } else {
+    agentId = process.env.LETTA_AGENT_ID?.trim();
   }
 
   if (!agentId) {

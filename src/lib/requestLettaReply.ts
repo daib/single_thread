@@ -5,7 +5,10 @@
  * When Letta is disabled (204), returns a setup hint instead of a fake demo reply.
  * Returns empty string when there is nothing user-visible (null / Python None).
  */
-export async function requestLettaReply(userText: string): Promise<string> {
+export async function requestLettaReply(
+  userText: string,
+  profileId?: string | null,
+): Promise<string> {
   const trimmed = userText.trim();
   if (!trimmed) {
     return "Message was empty.";
@@ -14,11 +17,14 @@ export async function requestLettaReply(userText: string): Promise<string> {
   const res = await fetch("/api/letta/send", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ body: trimmed }),
+    body: JSON.stringify({
+      body: trimmed,
+      ...(profileId ? { profileId } : {}),
+    }),
   });
 
   if (res.status === 204) {
-    return "Letta agent id is missing. Add LETTA_AGENT_ID to `.env` or `.env.letta` (copy from `.env.letta.example`), then restart `next dev`. Ensure `docker compose up letta` is running.";
+    return "Letta has no agent for this chat. For signed-in profiles, create a profile while Letta is running (each profile gets its own agent), or set LETTA_AGENT_ID in `.env` / `.env.letta`. Restart `next dev` after changing env. Ensure `docker compose up letta` is running.";
   }
 
   const data = (await res.json().catch(() => ({}))) as {
