@@ -71,6 +71,67 @@ describe("ChatMoreMenu", () => {
       await user.keyboard("{Escape}");
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     });
+
+    it("runs Download from menu when onDownload is provided", async () => {
+      const onDownload = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <ChatMoreMenu
+          conversationLabel="Export me"
+          variant="sidebar"
+          onRename={() => {}}
+          onDelete={() => {}}
+          onBranch={() => {}}
+          onDownload={onDownload}
+        />,
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: (n) => n.includes("More actions") && n.includes("Export me"),
+        }),
+      );
+      await user.click(screen.getByRole("menuitem", { name: "Download" }));
+      expect(onDownload).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
+
+    it("does not offer Download when onDownload is omitted", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatMoreMenu
+          conversationLabel="No export"
+          variant="sidebar"
+          onRename={() => {}}
+          onDelete={() => {}}
+          onBranch={() => {}}
+        />,
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: (n) => n.includes("More actions") && n.includes("No export"),
+        }),
+      );
+      expect(screen.queryByRole("menuitem", { name: "Download" })).toBeNull();
+    });
+
+    it("lists Rename, Branch, Download, Delete in order when all handlers exist", async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatMoreMenu
+          conversationLabel="Full"
+          variant="sidebar"
+          onRename={() => {}}
+          onDelete={() => {}}
+          onBranch={() => {}}
+          onDownload={() => {}}
+        />,
+      );
+      await user.click(
+        screen.getByRole("button", { name: (n) => n.includes("More actions") && n.includes("Full") }),
+      );
+      const items = screen.getAllByRole("menuitem");
+      expect(items.map((el) => el.textContent)).toEqual(["Rename", "Branch", "Download", "Delete"]);
+    });
   });
 
   describe("message variant", () => {

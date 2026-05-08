@@ -148,4 +148,45 @@ describe("ChatPanel", () => {
     expect(onDownload).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
+
+  it("shows only header icons for callbacks that are passed", () => {
+    render(
+      <ChatPanel
+        conversation={sampleConversation()}
+        onSend={noop}
+        onBranch={noop}
+        onRename={() => {}}
+        onDownload={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Rename conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download conversation as JSON" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Branch conversation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete conversation" })).toBeNull();
+  });
+
+  it("branches from assistant message with correct ids", async () => {
+    const onBranch = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChatPanel
+        conversation={sampleConversation({
+          messages: [
+            {
+              id: "ma",
+              role: "assistant",
+              body: "Reply",
+              sentAt: "2026-01-01T10:00:00.000Z",
+            },
+          ],
+        })}
+        onSend={noop}
+        onBranch={onBranch}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Branch from this message \(Assistant message\)/ }),
+    );
+    expect(onBranch).toHaveBeenCalledWith("c1", "ma");
+  });
 });
