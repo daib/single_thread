@@ -32,6 +32,7 @@ export function ChatMoreMenu({
 
   useEffect(() => setMounted(true), []);
 
+  const isInstantBranch = variant === "message";
   const tipVisible = (hover || focus) && !open;
 
   const updateTipPosition = useCallback(() => {
@@ -133,8 +134,8 @@ export function ChatMoreMenu({
             ? `Branch from this message (${conversationLabel})`
             : `More actions for “${conversationLabel}”`
         }
-        aria-expanded={open}
-        aria-haspopup="menu"
+        aria-expanded={isInstantBranch ? undefined : open}
+        aria-haspopup={isInstantBranch ? undefined : "menu"}
         onMouseEnter={() => {
           primeTipPosition();
           setHover(true);
@@ -153,6 +154,10 @@ export function ChatMoreMenu({
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if (isInstantBranch) {
+            onBranch?.();
+            return;
+          }
           setOpen((v) => !v);
         }}
       >
@@ -183,7 +188,7 @@ export function ChatMoreMenu({
           </span>
         )}
       </button>
-      {open ? (
+      {open && !isInstantBranch ? (
         <div className="chat-more-dropdown" role="menu">
           {onRename ? (
             <button
@@ -210,7 +215,7 @@ export function ChatMoreMenu({
                 setOpen(false);
               }}
             >
-              {variant === "message" ? "Branch from here" : "Branch"}
+              Branch
             </button>
           ) : null}
           {onDelete ? (
