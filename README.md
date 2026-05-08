@@ -153,7 +153,7 @@ Ensure `DATABASE_URL` is set in the environment and migrations have been applied
 | `POST` | `/api/profile/:profileId/conversations` | New thread: `{}` or `{ "title", "preview" }`. **Branch:** `{ "mode": "branch", "fromConversationId" }` copies messages from that thread (same profile) |
 | `DELETE` | `/api/conversations/:conversationId` | Delete thread and its messages if you own the profile |
 | `POST` | `/api/conversations/:conversationId/messages` | JSON: `{ "role": "user" \| "assistant", "body" }` — append message; returns updated conversation |
-| `POST` | `/api/letta/send` | JSON: `{ "body": string }` — calls Letta with that text when `LETTA_AGENT_ID` is set; **204** if Letta is disabled (no agent id) |
+| `POST` | `/api/letta/send` | JSON: `{ "body": string }` → Letta when `LETTA_AGENT_ID` is set; response `{ "reply": ... }` with assistant text or `null`. **204** if Letta is disabled |
 
 ## Docker Compose (optional)
 

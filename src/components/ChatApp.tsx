@@ -14,6 +14,7 @@ import {
   saveConversations,
   writeSelectedProfileId,
 } from "@/lib/chatStorage";
+import { requestLettaReply } from "@/lib/requestLettaReply";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
 
 let idCounter = 1000;
@@ -213,16 +214,8 @@ export function ChatApp() {
       const profileAtSend = selectedProfileId;
       if (!profileAtSend) return;
 
-      const trimmedForLetta = body.trim();
-      if (trimmedForLetta) {
-        void fetch("/api/letta/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ body: trimmedForLetta }),
-        }).catch(() => {
-          /* Letta is optional; failures are logged server-side */
-        });
-      }
+      const trimmed = body.trim();
+      if (!trimmed) return;
 
       if (useServerChats) {
         try {
@@ -231,7 +224,7 @@ export function ChatApp() {
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ role: "user", body }),
+              body: JSON.stringify({ role: "user", body: trimmed }),
             },
           );
           const data = (await res.json()) as { conversation?: Conversation; error?: string };
@@ -241,25 +234,26 @@ export function ChatApp() {
               prev.map((c) => (c.id === conversationId ? data.conversation! : c)),
             );
           }
-          window.setTimeout(async () => {
-            const res2 = await fetch(
-              `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  role: "assistant",
-                  body: "This is a local demo reply — wire your API here.",
-                }),
-              },
+
+          const assistantBody = await requestLettaReply(trimmed);
+
+          const res2 = await fetch(
+            `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                role: "assistant",
+                body: assistantBody,
+              }),
+            },
+          );
+          const data2 = (await res2.json()) as { conversation?: Conversation };
+          if (res2.ok && data2.conversation) {
+            setConversations((prev) =>
+              prev.map((c) => (c.id === conversationId ? data2.conversation! : c)),
             );
-            const data2 = (await res2.json()) as { conversation?: Conversation };
-            if (res2.ok && data2.conversation) {
-              setConversations((prev) =>
-                prev.map((c) => (c.id === conversationId ? data2.conversation! : c)),
-              );
-            }
-          }, 600);
+          }
         } catch {
           /* ignore */
         }
@@ -270,7 +264,7 @@ export function ChatApp() {
       const userMsg: Message = {
         id: nextId("m"),
         role: "user",
-        body,
+        body: trimmed,
         sentAt: now,
       };
 
@@ -279,7 +273,6 @@ export function ChatApp() {
           if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
           const wasEmpty = c.messages.length === 0;
           const messages = [...c.messages, userMsg];
-          const trimmed = body.trim();
           let title = c.title;
           if (wasEmpty && c.title === "New chat" && trimmed.length > 0) {
             title = trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
@@ -289,34 +282,33 @@ export function ChatApp() {
             profileId: profileAtSend,
             title,
             messages,
-            preview: body,
+            preview: trimmed,
             updatedAt: now,
           };
         }),
       );
 
-      const profileForReply = profileAtSend;
-      window.setTimeout(() => {
-        const reply: Message = {
-          id: nextId("m"),
-          role: "assistant",
-          body: "This is a local demo reply — wire your API here.",
-          sentAt: new Date().toISOString(),
-        };
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id !== conversationId || c.profileId !== profileForReply) return c;
-            const messages = [...c.messages, reply];
-            return {
-              ...c,
-              profileId: profileForReply,
-              messages,
-              preview: reply.body,
-              updatedAt: reply.sentAt,
-            };
-          }),
-        );
-      }, 600);
+      const assistantBody = await requestLettaReply(trimmed);
+      const replyAt = new Date().toISOString();
+      const reply: Message = {
+        id: nextId("m"),
+        role: "assistant",
+        body: assistantBody,
+        sentAt: replyAt,
+      };
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== conversationId || c.profileId !== profileAtSend) return c;
+          const messages = [...c.messages, reply];
+          return {
+            ...c,
+            profileId: profileAtSend,
+            messages,
+            preview: reply.body,
+            updatedAt: replyAt,
+          };
+        }),
+      );
     },
     [selectedProfileId, useServerChats],
   );

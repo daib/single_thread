@@ -1,13 +1,34 @@
 import { NextResponse } from "next/server";
+import { extractLettaAssistantText } from "@/lib/extractLettaAssistantText";
+import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
 
 export const runtime = "nodejs";
 
+loadLettaEnvFile();
+
 /**
- * Forwards the user's message to a Letta agent (self-hosted or cloud).
- * Set LETTA_AGENT_ID to enable; otherwise returns 204 and does nothing.
+ * Sends text to a Letta agent and returns the assistant reply in JSON when configured.
  *
  * @see https://docs.letta.com/api/resources/agents/subresources/messages/methods/create/
  */
+function summarizeLettaErrorBody(raw: string): string {
+  const rawTrim = raw.trim();
+  try {
+    const j = JSON.parse(rawTrim) as Record<string, unknown>;
+    if (typeof j.detail === "string") return j.detail.slice(0, 300);
+    if (typeof j.message === "string") return j.message.slice(0, 300);
+    if (Array.isArray(j.detail)) {
+      const first = j.detail[0];
+      if (first && typeof first === "object" && "msg" in first) {
+        return String((first as { msg?: unknown }).msg ?? rawTrim).slice(0, 300);
+      }
+    }
+  } catch {
+    /* use raw text */
+  }
+  return rawTrim.slice(0, 400) || "(empty response body)";
+}
+
 export async function POST(request: Request) {
   const agentId = process.env.LETTA_AGENT_ID?.trim();
   const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
@@ -50,17 +71,49 @@ export async function POST(request: Request) {
     });
 
     if (!res.ok) {
-      const detail = await res.text();
-      console.error("[letta/send]", res.status, detail.slice(0, 800));
+      const detailRaw = await res.text();
+      const hint = summarizeLettaErrorBody(detailRaw);
+      console.error("[letta/send]", res.status, detailRaw.slice(0, 800));
+
+      let summary = "Letta request failed.";
+      if (res.status === 404) {
+        summary = "Letta: agent not found — verify LETTA_AGENT_ID matches an agent on this server.";
+      } else if (res.status === 401 || res.status === 403) {
+        summary =
+          "Letta: authentication failed — set LETTA_API_KEY (e.g. LETTA_SERVER_PASSWORD if SECURE=true).";
+      } else if (res.status === 422 || res.status === 400) {
+        summary = "Letta: rejected the request.";
+      }
+
       return NextResponse.json(
-        { error: "Letta request failed.", status: res.status },
+        {
+          error: summary,
+          detail: hint,
+          lettaStatus: res.status,
+        },
         { status: 502 },
       );
     }
 
-    return new NextResponse(null, { status: 204 });
+    let payload: unknown;
+    try {
+      payload = await res.json();
+    } catch {
+      return NextResponse.json({ error: "Letta returned non-JSON response." }, { status: 502 });
+    }
+
+    const reply = extractLettaAssistantText(payload);
+    return NextResponse.json({ reply: reply ?? null });
   } catch (e) {
     console.error("[letta/send]", e);
-    return NextResponse.json({ error: "Could not reach Letta server." }, { status: 503 });
+    const detail = e instanceof Error ? e.message : String(e);
+    const hint =
+      /ECONNREFUSED|fetch failed/i.test(detail)
+        ? "Connection refused — is Letta running (`docker compose up letta`) and is LETTA_BASE_URL correct (try http://127.0.0.1:8283)?"
+        : detail.slice(0, 200);
+    return NextResponse.json(
+      { error: "Could not reach Letta server.", detail: hint, lettaStatus: 0 },
+      { status: 503 },
+    );
   }
 }
