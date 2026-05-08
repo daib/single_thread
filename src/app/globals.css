@@ -305,19 +305,38 @@ textarea {
 .sidebar-profile-panel .profile-chat-new-profile-btn,
 .sidebar-profile-panel .profile-chat-delete-profile-btn {
   width: 100%;
-  text-align: center;
+}
+
+.profile-chat-action-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  color: currentColor;
+}
+
+.profile-chat-action-icon svg {
+  display: block;
 }
 
 .profile-chat-new-profile-btn {
-  padding: 0.38rem 0.75rem;
+  display: inline-flex;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.45rem 0.35rem;
   font-size: 0.82rem;
   font-weight: 600;
   border-radius: 8px;
-  border: 1px solid var(--accent);
+  border: none;
   background: transparent;
   color: var(--accent);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  text-align: left;
+  transition: background 0.12s ease;
 }
 
 .profile-chat-new-profile-btn:hover {
@@ -325,20 +344,26 @@ textarea {
 }
 
 .profile-chat-delete-profile-btn {
-  padding: 0.38rem 0.75rem;
+  display: inline-flex;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0.45rem 0.35rem;
   font-size: 0.82rem;
   font-weight: 600;
   border-radius: 8px;
-  border: 1px solid rgba(248, 113, 113, 0.45);
+  border: none;
   background: transparent;
   color: #fca5a5;
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  text-align: left;
+  transition: background 0.12s ease;
 }
 
 .profile-chat-delete-profile-btn:hover {
   background: rgba(248, 113, 113, 0.12);
-  border-color: rgba(248, 113, 113, 0.65);
 }
 
 .quick-profile-dialog-root {
