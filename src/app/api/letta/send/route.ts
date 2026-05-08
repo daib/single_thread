@@ -18,8 +18,6 @@ loadLettaEnvFile();
 
 const LETTA_DEBUG_JSON_MAX = 24_000;
 const PROFILE_HISTORY_MAX_CHARS = 16_000;
-/** Sticky runtime guard: disable broken conversation endpoint after first server 5xx. */
-let conversationEndpointBrokenForSession = false;
 
 function jsonSnippet(value: unknown, maxChars: number): string {
   try {
@@ -135,24 +133,17 @@ function trimHistoryTail(text: string, maxChars: number): string {
   return text.slice(text.length - maxChars);
 }
 
-async function buildProfileHistoryContext(profileId: string): Promise<string | null> {
-  const rows = await prisma.chatConversation.findMany({
-    where: { profileId },
-    orderBy: [{ updatedAt: "asc" }],
+async function buildConversationHistoryContext(conversationId: string): Promise<string | null> {
+  const conv = await prisma.chatConversation.findUnique({
+    where: { id: conversationId },
     include: { messages: { orderBy: { sentAt: "asc" } } },
   });
-  if (rows.length === 0) return null;
+  if (!conv || conv.messages.length === 0) return null;
 
-  const chunks: string[] = [];
-  for (const conv of rows) {
-    if (conv.messages.length === 0) continue;
-    chunks.push(`Conversation: ${conv.title}`);
-    for (const m of conv.messages) {
-      chunks.push(`${m.role === "assistant" ? "Assistant" : "User"}: ${m.body}`);
-    }
-    chunks.push("");
+  const lines: string[] = [`Conversation: ${conv.title}`];
+  for (const m of conv.messages) {
+    lines.push(`${m.role === "assistant" ? "Assistant" : "User"}: ${m.body}`);
   }
-  if (chunks.length === 0) return null;
 
   const maxCharsRaw = Number.parseInt(
     process.env.LETTA_PROFILE_HISTORY_MAX_CHARS?.trim() ?? "",
@@ -162,13 +153,15 @@ async function buildProfileHistoryContext(profileId: string): Promise<string | n
     Number.isFinite(maxCharsRaw) && maxCharsRaw > 500
       ? maxCharsRaw
       : PROFILE_HISTORY_MAX_CHARS;
-
-  const full = chunks.join("\n").trim();
-  const bounded = trimHistoryTail(full, maxChars);
+  const bounded = trimHistoryTail(lines.join("\n"), maxChars);
   return [
-    "Background from previous conversations with this profile (most recent tail):",
+    "Background from this conversation thread (most recent tail):",
     bounded,
   ].join("\n");
+}
+
+function withSendMessageNudge(text: string): string {
+  return `${text}\n\n[Instruction for agent: respond to the user by calling send_message with your full answer. Do not end the turn without a user-visible message.]`;
 }
 
 function isAgentMissingError(lettaStatus: number, detail: string): boolean {
@@ -246,6 +239,12 @@ export async function POST(request: Request) {
     typeof o.profileId === "string" ? o.profileId.trim() : "";
   const appConversationIdRaw =
     typeof o.conversationId === "string" ? o.conversationId.trim() : "";
+  if (profileIdRaw && !appConversationIdRaw) {
+    return NextResponse.json(
+      { error: "conversationId is required for profile-scoped Letta sends." },
+      { status: 400 },
+    );
+  }
   if (appConversationIdRaw && !profileIdRaw) {
     return NextResponse.json(
       { error: "conversationId requires profileId." },
@@ -295,15 +294,6 @@ export async function POST(request: Request) {
         );
       }
       lettaConversationId = ensured.id;
-    } else {
-      try {
-        const historyContext = await buildProfileHistoryContext(profileIdRaw);
-        if (historyContext) {
-          outboundUserText = `${historyContext}\n\nCurrent user message:\n${bodyText}`;
-        }
-      } catch (e) {
-        console.warn("[letta/send] could not build profile history context:", e);
-      }
     }
   } else {
     agentId = process.env.LETTA_AGENT_ID?.trim();
@@ -313,40 +303,36 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 204 });
   }
 
-  // MemGPT-style agents only surface user-visible text via send_message; nudge so turns don’t end with only internal steps.
-  const outboundWithToolNudge = `${outboundUserText}\n\n[Instruction for agent: respond to the user by calling send_message with your full answer. Do not end the turn without a user-visible message.]`;
-
   const client = new Letta({
     baseURL: base,
     apiKey: process.env.LETTA_API_KEY?.trim() || null,
   });
 
   try {
-    let usedConversationThread =
-      Boolean(lettaConversationId) && !conversationEndpointBrokenForSession;
+    const usedConversationThread = Boolean(lettaConversationId);
+    let effectiveOutboundUserText = outboundUserText;
+    if (!usedConversationThread && appConversationIdRaw) {
+      try {
+        const threadHistory = await buildConversationHistoryContext(appConversationIdRaw);
+        if (threadHistory) {
+          effectiveOutboundUserText = `${threadHistory}\n\nCurrent user message:\n${bodyText}`;
+        }
+      } catch (e) {
+        console.warn("[letta/send] could not build conversation history context:", e);
+      }
+    }
+    let currentTurnUserText = withSendMessageNudge(effectiveOutboundUserText);
     let payload: unknown;
     if (usedConversationThread && lettaConversationId) {
       try {
         payload = await postLettaConversationMessageNonStreaming(
           lettaConversationId,
-          outboundWithToolNudge,
+          currentTurnUserText,
         );
       } catch (e) {
         if (e instanceof LettaHttpError && e.status >= 500) {
-          // Keep chat working when conversation endpoint is broken on this Letta build.
-          conversationEndpointBrokenForSession = true;
-          const why = isConversationStepSignatureError(e.status, e.message)
-            ? "step(conversation_id) signature mismatch"
-            : `HTTP ${e.status}`;
-          console.warn(
-            `[letta/send] conversations.send failed (${why}); falling back to agent thread and disabling conversation endpoint for this dev session.`,
-          );
-          usedConversationThread = false;
-          payload = await sendAgentMessageCompatible(
-            client,
-            agentId,
-            outboundWithToolNudge,
-          );
+          // Strict mode: do not fall back to agent/default conversation when a per-chat conversation send fails.
+          throw e;
         } else {
           throw e;
         }
@@ -355,7 +341,7 @@ export async function POST(request: Request) {
       payload = await sendAgentMessageCompatible(
         client,
         agentId,
-        outboundWithToolNudge,
+        currentTurnUserText,
       );
     }
 
@@ -367,7 +353,7 @@ export async function POST(request: Request) {
     );
 
     const reply = await resolveLettaAssistantReply(client, agentId, payload, {
-      currentUserText: outboundWithToolNudge,
+      currentUserText: currentTurnUserText,
       startedAtMs,
       conversationLettaId: usedConversationThread ? lettaConversationId : undefined,
     });
