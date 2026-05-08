@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ChatMoreMenu } from "@/components/ChatMoreMenu";
+import { PortalTooltipButton } from "@/components/PortalTooltipButton";
 import { formatRelativeTime } from "@/formatTime";
 import { buildConversationTree, type ConversationTreeNode } from "@/lib/conversationTree";
 import type { Conversation } from "@/types";
@@ -123,14 +124,33 @@ export function ConversationSidebar({
           <>
             <div className="sidebar-header">
               <h2 className="sidebar-title">Conversations</h2>
-              <button
-                type="button"
+              <PortalTooltipButton
+                tooltip="New chat"
+                ariaLabel="New chat"
                 className="sidebar-new-chat"
-                onClick={onNewChat}
                 disabled={listLoading}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNewChat();
+                }}
               >
-                New chat
-              </button>
+                <span className="sidebar-new-chat-icon" aria-hidden>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.25"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="12" x2="12" y1="5" y2="19" />
+                    <line x1="5" x2="19" y1="12" y2="12" />
+                  </svg>
+                </span>
+              </PortalTooltipButton>
             </div>
             {listLoading ? (
               <div className="conversation-list conversation-list-loading" role="status">

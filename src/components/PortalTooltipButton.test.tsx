@@ -44,4 +44,15 @@ describe("PortalTooltipButton", () => {
     await user.hover(screen.getByRole("button", { name: "Menu" }));
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
+
+  it("does not show tooltip when disabled", async () => {
+    const user = userEvent.setup();
+    render(
+      <PortalTooltipButton tooltip="Nope" ariaLabel="Off" disabled onClick={() => {}}>
+        x
+      </PortalTooltipButton>,
+    );
+    await user.hover(screen.getByRole("button", { name: "Off" }));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
 });

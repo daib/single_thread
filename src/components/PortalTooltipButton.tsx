@@ -18,6 +18,7 @@ type Props = {
   hideTooltip?: boolean;
   children: ReactNode;
   onClick: ButtonHTMLAttributes<HTMLButtonElement>["onClick"];
+  disabled?: boolean;
 } & Pick<ButtonHTMLAttributes<HTMLButtonElement>, "aria-expanded" | "aria-haspopup">;
 
 export function PortalTooltipButton({
@@ -27,6 +28,7 @@ export function PortalTooltipButton({
   hideTooltip = false,
   children,
   onClick,
+  disabled = false,
   "aria-expanded": ariaExpanded,
   "aria-haspopup": ariaHaspopup,
 }: Props) {
@@ -38,7 +40,7 @@ export function PortalTooltipButton({
 
   useEffect(() => setMounted(true), []);
 
-  const tipVisible = (hover || focus) && !hideTooltip;
+  const tipVisible = (hover || focus) && !hideTooltip && !disabled;
 
   const updateTipPosition = useCallback(() => {
     const el = triggerRef.current;
@@ -106,6 +108,7 @@ export function PortalTooltipButton({
         aria-label={ariaLabel}
         aria-expanded={ariaExpanded}
         aria-haspopup={ariaHaspopup}
+        disabled={disabled}
         onMouseEnter={() => {
           primeTipPosition();
           setHover(true);
