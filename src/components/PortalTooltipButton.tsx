@@ -6,7 +6,6 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -63,7 +62,7 @@ export function PortalTooltipButton({
     });
   }, []);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!mounted || !tipVisible) return;
     updateTipPosition();
     window.addEventListener("scroll", updateTipPosition, true);
@@ -74,8 +73,10 @@ export function PortalTooltipButton({
     };
   }, [mounted, tipVisible, updateTipPosition]);
 
+  const canPortal = typeof document !== "undefined" && document.body != null;
   const tooltipPortal =
     mounted &&
+    canPortal &&
     tipVisible &&
     tipPos &&
     createPortal(
