@@ -1,7 +1,7 @@
 "use client";
 
-import { createPortal } from "react-dom";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { PortalTooltipButton } from "@/components/PortalTooltipButton";
 
 type Props = {
   /** Shown to screen readers on the ⋮ trigger (e.g. chat title). */
@@ -23,50 +23,9 @@ export function ChatMoreMenu({
   variant = "sidebar",
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [hover, setHover] = useState(false);
-  const [focus, setFocus] = useState(false);
-  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => setMounted(true), []);
 
   const isInstantBranch = variant === "message";
-  const tipVisible = (hover || focus) && !open;
-
-  const updateTipPosition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const gap = 8;
-    setTipPos({
-      left: r.left + r.width / 2,
-      top: r.bottom + gap,
-    });
-  }, []);
-
-  const primeTipPosition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const gap = 8;
-    setTipPos({
-      left: r.left + r.width / 2,
-      top: r.bottom + gap,
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!mounted || !tipVisible) return;
-    updateTipPosition();
-    window.addEventListener("scroll", updateTipPosition, true);
-    window.addEventListener("resize", updateTipPosition);
-    return () => {
-      window.removeEventListener("scroll", updateTipPosition, true);
-      window.removeEventListener("resize", updateTipPosition);
-    };
-  }, [mounted, tipVisible, updateTipPosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,57 +60,19 @@ export function ChatMoreMenu({
       ? "Branch from this message"
       : `More options — ${truncatedLabel}`;
 
-  const tooltipPortal =
-    mounted &&
-    tipVisible &&
-    tipPos &&
-    createPortal(
-      <div
-        className="chat-tooltip-floater"
-        style={{
-          position: "fixed",
-          left: tipPos.left,
-          top: tipPos.top,
-          transform: "translateX(-50%)",
-          zIndex: 10100,
-        }}
-        role="tooltip"
-      >
-        {triggerTitle}
-      </div>,
-      document.body,
-    );
-
   return (
     <div className="chat-more-wrap" ref={wrapRef}>
-      {tooltipPortal}
-      <button
-        ref={triggerRef}
-        type="button"
-        className={triggerClass}
-        aria-label={
+      <PortalTooltipButton
+        tooltip={triggerTitle}
+        ariaLabel={
           variant === "message"
             ? `Branch from this message (${conversationLabel})`
             : `More actions for “${conversationLabel}”`
         }
+        className={triggerClass}
         aria-expanded={isInstantBranch ? undefined : open}
         aria-haspopup={isInstantBranch ? undefined : "menu"}
-        onMouseEnter={() => {
-          primeTipPosition();
-          setHover(true);
-        }}
-        onMouseLeave={() => {
-          setHover(false);
-          setTipPos(null);
-        }}
-        onFocus={() => {
-          primeTipPosition();
-          setFocus(true);
-        }}
-        onBlur={() => {
-          setFocus(false);
-          setTipPos(null);
-        }}
+        hideTooltip={!isInstantBranch && open}
         onClick={(e) => {
           e.stopPropagation();
           if (isInstantBranch) {
@@ -187,7 +108,7 @@ export function ChatMoreMenu({
             <span className="chat-more-dot" />
           </span>
         )}
-      </button>
+      </PortalTooltipButton>
       {open && !isInstantBranch ? (
         <div className="chat-more-dropdown" role="menu">
           {onRename ? (

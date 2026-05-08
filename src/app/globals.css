@@ -757,6 +757,17 @@ textarea {
   display: block;
 }
 
+.chat-more-copy-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.chat-more-copy-icon svg {
+  display: block;
+}
+
 .chat-more-trigger:hover {
   background: var(--bg-hover);
   color: var(--text);
@@ -1071,6 +1082,10 @@ textarea {
 }
 
 .message-actions-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.2rem;
   flex-shrink: 0;
   margin-top: 0.3rem;
   opacity: 0;
