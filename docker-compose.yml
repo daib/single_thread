@@ -1,20 +1,25 @@
 # docker-compose.yml
-version: '3.8'
 services:
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: singlethread
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
   letta:
     image: lettaai/letta:latest
     ports:
       - "8283:8283"
+    env_file:
+      - path: .env.letta
+        required: false
+    volumes:
+      - letta_pgdata:/var/lib/postgresql/data
 
 volumes:
   postgres_data:
+  letta_pgdata:

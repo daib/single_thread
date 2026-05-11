@@ -1,0 +1,192 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ChatPanel } from "@/components/ChatPanel";
+import type { Conversation } from "@/types";
+
+vi.mock("@/formatTime", () => ({
+  formatClock: () => "3:00 PM",
+}));
+
+vi.mock("@/lib/copyTextToClipboard", () => ({
+  copyTextToClipboard: vi.fn().mockResolvedValue(true),
+}));
+
+import { copyTextToClipboard } from "@/lib/copyTextToClipboard";
+
+function sampleConversation(over: Partial<Conversation> = {}): Conversation {
+  return {
+    id: "c1",
+    profileId: "p1",
+    title: "Test chat",
+    preview: "pv",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        body: "Hello there",
+        sentAt: "2026-01-01T10:00:00.000Z",
+      },
+    ],
+    ...over,
+  };
+}
+
+const noop = () => {};
+
+describe("ChatPanel", () => {
+  beforeEach(() => {
+    vi.mocked(copyTextToClipboard).mockClear();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("shows empty state without conversation", () => {
+    render(
+      <ChatPanel conversation={undefined} onSend={noop} onBranch={noop} />,
+    );
+    expect(screen.getByText("Select a conversation to read messages.")).toBeInTheDocument();
+  });
+
+  it("renders heading and message body", () => {
+    render(
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={noop} />,
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Test chat");
+    expect(screen.getByText("Hello there")).toBeInTheDocument();
+  });
+
+  it("submits composer and calls onSend", async () => {
+    const onSend = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChatPanel conversation={sampleConversation()} onSend={onSend} onBranch={noop} />,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Message text" }), "outgoing");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(onSend).toHaveBeenCalledWith("c1", "outgoing");
+  });
+
+  it("copies visible message via copy control", async () => {
+    const user = userEvent.setup();
+    render(
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={noop} />,
+    );
+    await user.click(screen.getByRole("button", { name: "Copy message to clipboard" }));
+    expect(copyTextToClipboard).toHaveBeenCalledWith("Hello there");
+  });
+
+  it("branches from user message with conversation and message ids", async () => {
+    const onBranch = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={onBranch} />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Branch from this message \(Your message\)/ }),
+    );
+    expect(onBranch).toHaveBeenCalledWith("c1", "m1");
+  });
+
+  it("shows Branched label when conversation has branchOfId", () => {
+    render(
+      <ChatPanel
+        conversation={sampleConversation({ branchOfId: "parent-id" })}
+        onSend={noop}
+        onBranch={noop}
+      />,
+    );
+    expect(screen.getByText("Branched")).toBeInTheDocument();
+  });
+
+  it("shows active profile in subtitle", () => {
+    render(
+      <ChatPanel
+        conversation={sampleConversation()}
+        activeProfile={{ id: "p1", displayName: "Ada", handle: "ada" }}
+        onSend={noop}
+        onBranch={noop}
+      />,
+    );
+    expect(screen.getByText("Ada")).toBeInTheDocument();
+    expect(screen.getByText("@ada")).toBeInTheDocument();
+  });
+
+  it("does not show header action icons without callbacks", () => {
+    render(
+      <ChatPanel conversation={sampleConversation()} onSend={noop} onBranch={noop} />,
+    );
+    expect(screen.queryByRole("button", { name: "Rename conversation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Branch conversation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Download conversation as JSON" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete conversation" })).toBeNull();
+  });
+
+  it("calls header action callbacks when provided", async () => {
+    const onRename = vi.fn();
+    const onBranchThread = vi.fn();
+    const onDownload = vi.fn();
+    const onDelete = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChatPanel
+        conversation={sampleConversation()}
+        onSend={noop}
+        onBranch={noop}
+        onRename={onRename}
+        onBranchThread={onBranchThread}
+        onDownload={onDownload}
+        onDelete={onDelete}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Rename conversation" }));
+    await user.click(screen.getByRole("button", { name: "Branch conversation" }));
+    await user.click(screen.getByRole("button", { name: "Download conversation as JSON" }));
+    await user.click(screen.getByRole("button", { name: "Delete conversation" }));
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(onBranchThread).toHaveBeenCalledTimes(1);
+    expect(onDownload).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows only header icons for callbacks that are passed", () => {
+    render(
+      <ChatPanel
+        conversation={sampleConversation()}
+        onSend={noop}
+        onBranch={noop}
+        onRename={() => {}}
+        onDownload={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Rename conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download conversation as JSON" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Branch conversation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete conversation" })).toBeNull();
+  });
+
+  it("branches from assistant message with correct ids", async () => {
+    const onBranch = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ChatPanel
+        conversation={sampleConversation({
+          messages: [
+            {
+              id: "ma",
+              role: "assistant",
+              body: "Reply",
+              sentAt: "2026-01-01T10:00:00.000Z",
+            },
+          ],
+        })}
+        onSend={noop}
+        onBranch={onBranch}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Branch from this message \(Assistant message\)/ }),
+    );
+    expect(onBranch).toHaveBeenCalledWith("c1", "ma");
+  });
+});
