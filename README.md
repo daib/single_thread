@@ -1,5 +1,8 @@
 # Single-thread chat
 
+This is the first implementation of the thinking tool envisioned in [DESIGN.md](DESIGN.md). Rather than converging on a single answer, it helps people develop richer understanding by examining any problem, decision, or situation from genuinely different angles.
+
+## Overview
 TypeScript + React + **Next.js** (App Router) UI: a sidebar to choose a conversation, a main pane for the thread, and a message composer. Each signed-in user has **at most one account** (name + unique handle + optional bio, keyed by Auth.js user id); **profiles** (multiple: name, handle, optional bio) are stored under that account in **Postgres** via Prisma.
 
 **Stack:** Next.js 15, React 19, Prisma, PostgreSQL, [Auth.js](https://authjs.dev) (Google + optional Facebook).
