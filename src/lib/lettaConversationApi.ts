@@ -1,4 +1,9 @@
-import { APIError, Letta } from "@letta-ai/letta-client";
+import { APIError } from "@letta-ai/letta-client";
+import {
+  createLettaClient,
+  lettaBaseUrl,
+  lettaJsonHeaders,
+} from "@/lib/lettaClient";
 import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
 
 export type CreateLettaConversationResult =
@@ -15,32 +20,10 @@ export class LettaHttpError extends Error {
   }
 }
 
-function lettaBaseUrl(): string {
-  loadLettaEnvFile();
-  const raw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
-  return raw.replace(/\/$/, "");
-}
-
-function lettaHeaders(): Record<string, string> {
-  const apiKey = process.env.LETTA_API_KEY?.trim();
-  return {
-    "Content-Type": "application/json",
-    ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-  };
-}
-
 function missingRequiredField(detailRaw: string, fieldName: string): boolean {
   if (!/field required/i.test(detailRaw)) return false;
   const escaped = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`['"]${escaped}['"]`, "i").test(detailRaw);
-}
-
-function lettaClient(): Letta {
-  loadLettaEnvFile();
-  return new Letta({
-    baseURL: lettaBaseUrl(),
-    apiKey: process.env.LETTA_API_KEY?.trim() || null,
-  });
 }
 
 function parseIsolatedBlockLabelsFromEnv(): string[] {
@@ -68,7 +51,7 @@ export async function createLettaConversationForAgent(
 
   try {
     const isolated = parseIsolatedBlockLabelsFromEnv();
-    const conv = await lettaClient().conversations.create({
+    const conv = await createLettaClient().conversations.create({
       agent_id: agent,
       ...(isolated.length > 0 ? { isolated_block_labels: isolated } : {}),
     });
@@ -98,7 +81,7 @@ export async function forkLettaConversation(
   if (!sourceId) return { ok: false, detail: "Missing source conversation id." };
 
   try {
-    const conv = await lettaClient().conversations.fork(sourceId, {});
+    const conv = await createLettaClient().conversations.fork(sourceId, {});
     const id = conversationIdFromUnknown(conv);
     if (id) return { ok: true, id };
     return { ok: false, detail: "Letta returned fork payload without id." };
@@ -130,7 +113,7 @@ export async function postLettaConversationMessageNonStreaming(
   const send = async (body: Record<string, unknown>): Promise<{ status: number; text: string }> => {
     const res = await fetch(url, {
       method: "POST",
-      headers: lettaHeaders(),
+      headers: lettaJsonHeaders(),
       body: JSON.stringify(body),
     });
     return { status: res.status, text: await res.text() };
@@ -202,7 +185,7 @@ export async function deleteLettaConversationBestEffort(conversationId: string):
   try {
     const res = await fetch(`${base}/v1/conversations/${encodeURIComponent(trimmed)}`, {
       method: "DELETE",
-      headers: lettaHeaders(),
+      headers: lettaJsonHeaders(),
     });
     if (!res.ok && res.status !== 404) {
       const t = await res.text();

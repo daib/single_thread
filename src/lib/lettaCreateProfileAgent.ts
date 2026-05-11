@@ -1,4 +1,4 @@
-import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
+import { lettaBaseUrl, lettaJsonHeaders } from "@/lib/lettaClient";
 
 /** Self-hosted Letta uses `CreateAgent` (OpenAPI), not the cloud-style `model` / `embedding` fields the Node SDK sends to the same path. */
 type CreateAgentBody = {
@@ -57,23 +57,15 @@ function normalizeEmbeddingModel(handle: string): string {
   return normalizeLlmModel(handle);
 }
 
-function lettaHeaders(apiKey: string | null): Record<string, string> {
-  return {
-    "Content-Type": "application/json",
-    ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-  };
-}
-
 async function createAndAttachCoreBlock(opts: {
   base: string;
-  apiKey: string | null;
   agentId: string;
   block: CoreBlockSpec;
 }): Promise<void> {
   try {
     const createRes = await fetch(`${opts.base}/v1/blocks/`, {
       method: "POST",
-      headers: lettaHeaders(opts.apiKey),
+      headers: lettaJsonHeaders(),
       body: JSON.stringify({
         label: opts.block.label,
         value: opts.block.value,
@@ -105,7 +97,7 @@ async function createAndAttachCoreBlock(opts: {
       `${opts.base}/v1/agents/${encodeURIComponent(opts.agentId)}/core-memory/blocks/attach/${encodeURIComponent(blockId)}`,
       {
         method: "PATCH",
-        headers: lettaHeaders(opts.apiKey),
+        headers: lettaJsonHeaders(),
       },
     );
     if (!attachRes.ok) {
@@ -128,7 +120,6 @@ async function createAndAttachCoreBlock(opts: {
 
 async function createAndAttachRequiredCoreBlocks(opts: {
   base: string;
-  apiKey: string | null;
   agentId: string;
   displayName: string;
   profileId: string;
@@ -157,7 +148,6 @@ async function createAndAttachRequiredCoreBlocks(opts: {
   for (const block of blocks) {
     await createAndAttachCoreBlock({
       base: opts.base,
-      apiKey: opts.apiKey,
       agentId: opts.agentId,
       block,
     });
@@ -172,10 +162,7 @@ export async function createLettaAgentForProfile(opts: {
   displayName: string;
   profileId: string;
 }): Promise<string | null> {
-  loadLettaEnvFile();
-  const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
-  const base = baseRaw.replace(/\/$/, "");
-  const apiKey = process.env.LETTA_API_KEY?.trim() || null;
+  const base = lettaBaseUrl();
 
   const modelHandle =
     process.env.LETTA_NEW_AGENT_MODEL?.trim() || "openai/gpt-4o-mini";
@@ -243,9 +230,7 @@ export async function createLettaAgentForProfile(opts: {
   try {
     const res = await fetch(`${base}/v1/agents/`, {
       method: "POST",
-      headers: {
-        ...lettaHeaders(apiKey),
-      },
+      headers: lettaJsonHeaders(),
       body: JSON.stringify(body),
     });
 
@@ -265,7 +250,6 @@ export async function createLettaAgentForProfile(opts: {
 
     await createAndAttachRequiredCoreBlocks({
       base,
-      apiKey,
       agentId,
       displayName: opts.displayName,
       profileId: opts.profileId,
@@ -286,19 +270,14 @@ export async function deleteLettaAgentById(agentId: string): Promise<boolean> {
   const trimmed = agentId.trim();
   if (!trimmed) return true;
 
-  loadLettaEnvFile();
-  const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
-  const base = baseRaw.replace(/\/$/, "");
-  const apiKey = process.env.LETTA_API_KEY?.trim() || null;
+  const base = lettaBaseUrl();
 
   try {
     const res = await fetch(
       `${base}/v1/agents/${encodeURIComponent(trimmed)}`,
       {
         method: "DELETE",
-        headers: {
-          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-        },
+        headers: lettaJsonHeaders(),
       },
     );
     if (res.ok || res.status === 404) {

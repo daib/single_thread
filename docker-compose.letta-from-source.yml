@@ -1,0 +1,17 @@
+# Optional overlay: build the `letta` image from a local Letta git clone (same Dockerfile as upstream).
+#
+#   git clone https://github.com/daib/letta.git ../letta   # or letta-ai/letta
+#   docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml build letta
+#   docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml up -d letta_db letta
+#
+# One step (rebuild then start):
+#   docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml up -d --build letta_db letta
+#
+# Env: LETTA_BUILD_CONTEXT — path to Letta repo (default: ../letta)
+#      LETTA_DOCKER_IMAGE — image tag (default when using this file: letta:local)
+services:
+  letta:
+    image: ${LETTA_DOCKER_IMAGE:-letta:local}
+    build:
+      context: ${LETTA_BUILD_CONTEXT:-../letta}
+      dockerfile: Dockerfile

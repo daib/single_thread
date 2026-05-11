@@ -4,6 +4,7 @@ A demo exploring a different philosophy for AI-assisted reasoning: instead of co
 
 See [DESIGN.md](DESIGN.md) for the full design philosophy and motivation.
 
+![Alt Text](docs/Screenshot.png)
 ---
 
 ## The Problem With Linear Conversation
@@ -76,7 +77,31 @@ Next.js 15, React 19, TypeScript, Prisma, PostgreSQL, Auth.js.
 npm install
 ```
 
-### Environment
+### Letta (optional AI backend)
+
+Pull the published image (default in `docker-compose.yml`):
+
+```bash
+docker-compose up -d letta_db letta
+```
+
+Build **from a local Letta clone** when you want (`../letta` by default, or set `LETTA_BUILD_CONTEXT`):
+
+```bash
+git clone https://github.com/daib/letta.git ../letta
+npm run letta:compose:build
+docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml up -d letta_db letta
+```
+
+One step (rebuild then start):
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml up -d --build letta_db letta
+```
+
+Override clone path: `LETTA_BUILD_CONTEXT=/path/to/letta`. Override tag: `LETTA_DOCKER_IMAGE=my:tag`.
+
+### Run
 
 ```bash
 cp .env.example .env

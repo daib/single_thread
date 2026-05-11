@@ -1,5 +1,5 @@
 import { deleteLettaAgentById } from "@/lib/lettaCreateProfileAgent";
-import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
+import { lettaBaseUrl, lettaJsonHeaders } from "@/lib/lettaClient";
 import { prisma } from "@/lib/prisma";
 
 export type ReconcileLettaAgentsResult = {
@@ -27,15 +27,8 @@ function parseExtraKeepIds(): string[] {
  * excluding `LETTA_AGENT_ID` and optional `LETTA_AGENT_IDS_TO_KEEP`.
  */
 export async function reconcileLettaAgentsWithProfiles(): Promise<ReconcileLettaAgentsResult> {
-  loadLettaEnvFile();
-  const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
-  const base = baseRaw.replace(/\/$/, "");
-  const apiKey = process.env.LETTA_API_KEY?.trim() || null;
-
-  const listRes = await fetch(`${base}/v1/agents/`, {
-    headers: {
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
+  const listRes = await fetch(`${lettaBaseUrl()}/v1/agents/`, {
+    headers: lettaJsonHeaders(),
   });
 
   if (!listRes.ok) {
