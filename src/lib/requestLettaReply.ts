@@ -26,7 +26,7 @@ export async function requestLettaReply(
   });
 
   if (res.status === 204) {
-    return "Letta has no agent for this chat. For signed-in profiles, create a profile while Letta is running (each profile gets its own agent), or set LETTA_AGENT_ID in `.env` / `.env.letta`. Restart `next dev` after changing env. Ensure `docker compose up letta` is running.";
+    return "Letta has no agent for this chat. For signed-in profiles, create a profile while Letta is running (each profile gets its own agent), or set LETTA_AGENT_ID in `.env` / `.env.letta`. Restart `next dev` after changing env. Ensure `docker-compose up letta` is running.";
   }
 
   const data = (await res.json().catch(() => ({}))) as {

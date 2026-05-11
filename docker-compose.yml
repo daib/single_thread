@@ -1,4 +1,6 @@
 # docker-compose.yml
+# Letta layout follows https://github.com/daib/letta/blob/main/compose.yaml (letta_db + letta server).
+# Next.js uses LETTA_BASE_URL=http://127.0.0.1:8283 (see .env.letta.example).
 services:
   db:
     image: pgvector/pgvector:pg18
@@ -10,15 +12,39 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
 
+  letta_db:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_USER: letta
+      POSTGRES_PASSWORD: letta
+      POSTGRES_DB: letta
+    # PG 18+ images expect the volume on /var/lib/postgresql (not .../data); see docker-library/postgres#1259
+    volumes:
+      - letta_pgdata:/var/lib/postgresql
+      - ./docker/letta-init.sql:/docker-entrypoint-initdb.d/01-letta-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U letta -d letta"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   letta:
-    image: lettaai/letta:latest
+    # Default: pull `letta/letta:latest`. Build from source on demand:
+    #   docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml build letta
+    # (see overlay file). Or: `npm run letta:docker:build` / `npm run letta:compose:build`.
+    image: ${LETTA_DOCKER_IMAGE:-letta/letta:latest}
+    hostname: letta-server
+    depends_on:
+      letta_db:
+        condition: service_healthy
     ports:
+      - "8083:8083"
       - "8283:8283"
     env_file:
       - path: .env.letta
         required: false
-    volumes:
-      - letta_pgdata:/var/lib/postgresql/data
+    environment:
+      LETTA_PG_URI: postgresql://letta:letta@letta_db:5432/letta
 
 volumes:
   postgres_data:

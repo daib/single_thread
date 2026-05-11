@@ -7,6 +7,7 @@ import {
   LettaHttpError,
   postLettaConversationMessageNonStreaming,
 } from "@/lib/lettaConversationApi";
+import { createLettaClient } from "@/lib/lettaClient";
 import { resolveLettaAssistantReply } from "@/lib/resolveLettaAssistantReply";
 import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
 import { requireOwnedConversation, requireOwnedProfile } from "@/lib/profileAccess";
@@ -219,8 +220,6 @@ function lettaErrorResponse(lettaStatus: number, detail: string) {
 
 export async function POST(request: Request) {
   const startedAtMs = Date.now();
-  const baseRaw = process.env.LETTA_BASE_URL?.trim() || "http://127.0.0.1:8283";
-  const base = baseRaw.replace(/\/$/, "");
 
   let json: unknown;
   try {
@@ -297,10 +296,7 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const client = new Letta({
-    baseURL: base,
-    apiKey: process.env.LETTA_API_KEY?.trim() || null,
-  });
+  const client = createLettaClient();
 
   try {
     const usedConversationThread = Boolean(lettaConversationId);
@@ -384,7 +380,7 @@ export async function POST(request: Request) {
       (e instanceof Error && /ECONNREFUSED|fetch failed/i.test(e.message));
     const detail = e instanceof Error ? e.message : String(e);
     const hint = isConn
-      ? "Connection refused — is Letta running (`docker compose up letta`) and is LETTA_BASE_URL correct (try http://127.0.0.1:8283)?"
+      ? "Connection refused — is Letta running (`docker-compose up letta`) and is LETTA_BASE_URL correct (try http://127.0.0.1:8283)?"
       : detail.slice(0, 200);
     return NextResponse.json(
       { error: "Could not reach Letta server.", detail: hint, lettaStatus: 0 },

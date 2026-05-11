@@ -5,7 +5,8 @@ This is the first implementation of the thinking tool envisioned in [DESIGN.md](
 ## Overview
 TypeScript + React + **Next.js** (App Router) UI: a sidebar to choose a conversation, a main pane for the thread, and a message composer. Each signed-in user has **at most one account** (name + unique handle + optional bio, keyed by Auth.js user id); **profiles** (multiple: name, handle, optional bio) are stored under that account in **Postgres** via Prisma.
 
-**Stack:** Next.js 15, React 19, Prisma, PostgreSQL, [Auth.js](https://authjs.dev) (Google + optional Facebook).
+![Alt Text](docs/Screenshot.png)
+---
 
 ## Prerequisites
 
@@ -87,39 +88,31 @@ With the Compose Postgres container running (e.g. `docker-compose up -d db`):
 npm run db:init
 ```
 
-This script (`scripts/init-db.sh`):
+### Letta (optional AI backend)
 
-1. If the **`db` Docker service is running**, it runs `psql` **inside that container** (so you always use the `postgres` user from the image). Otherwise it uses `psql` on `localhost` (see troubleshooting below).
-2. Connects as the superuser (`postgres` / `postgres` by default, same as Compose).
-3. Creates the database `singlethread` if it does not exist.
-4. Creates a login role **`singlethread`** with password **`singlethread`** (override with `APP_DB_USER` / `APP_DB_PASSWORD`).
-5. Grants schema/table privileges.
-6. Runs **`prisma migrate deploy`** as the **superuser** (`POSTGRES_SUPERUSER` / `POSTGRES_SUPERPASS`) so Prisma always has enough rights; your `.env` app role URL does not affect this step.
+Pull the published image (default in `docker-compose.yml`):
 
-It prints a `DATABASE_URL` for the app user you can paste into `.env`.  
-Override host/port/superuser with `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_SUPERUSER`, `POSTGRES_SUPERPASS`, `POSTGRES_DB` if needed.
+```bash
+docker-compose up -d letta_db letta
+```
 
-**`FATAL: role "postgres" does not exist`:** Something on `localhost:5432` is not the Docker image (often **Homebrew** or **Postgres.app**, where the superuser is your macOS login, not `postgres`). Fix: run `docker-compose up -d db`, then `npm run db:init` again. To force using host `psql` instead, set `INIT_DB_USE_HOST_PSQL=1` and set `POSTGRES_SUPERUSER` to your local superuser (often `echo $USER`).
+Build **from a local Letta clone** when you want (`../letta` by default, or set `LETTA_BUILD_CONTEXT`):
 
-**`P1010: User was denied access on the database (not available)`** (Prisma): Often **two Postgres servers** — `psql` in `db:init` talks to Docker, but Prisma on the host used `localhost`, which on macOS can resolve to **`::1`** and hit **Homebrew** Postgres instead of Docker. The init script defaults Prisma to **`127.0.0.1`** when the Compose `db` container is used. In `.env`, prefer `postgresql://...@127.0.0.1:5432/...` instead of `localhost` when Docker publishes `5432`. Override with `DB_URL_HOST` if needed.
+```bash
+git clone https://github.com/daib/letta.git ../letta
+npm run letta:compose:build
+docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml up -d letta_db letta
+```
 
-### Other schema workflows
+One step (rebuild then start):
 
-- **Interactive migrations** (development):
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.letta-from-source.yml up -d --build letta_db letta
+```
 
-  ```bash
-  npm run db:migrate
-  ```
+Override clone path: `LETTA_BUILD_CONTEXT=/path/to/letta`. Override tag: `LETTA_DOCKER_IMAGE=my:tag`.
 
-- **Push schema without migration history** (quick local sync only):
-
-  ```bash
-  npm run db:push
-  ```
-
-Inspect data: `npm run db:studio`.
-
-## Development
+### Run
 
 ```bash
 npm run dev
