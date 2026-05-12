@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ChatMoreMenu } from "@/components/ChatMoreMenu";
+import { MessageMarkdown } from "@/components/MessageMarkdown";
 import { PortalTooltipButton } from "@/components/PortalTooltipButton";
 import { formatClock } from "@/formatTime";
 import { copyTextToClipboard } from "@/lib/copyTextToClipboard";
@@ -33,7 +34,9 @@ function MessageBubble({
       aria-label={`${message.role} message`}
     >
       <div className="role-label">{isUser ? "You" : "Assistant"}</div>
-      <div className="bubble">{message.body}</div>
+      <div className="bubble">
+        <MessageMarkdown body={message.body} />
+      </div>
       <time className="timestamp" dateTime={message.sentAt}>
         {formatClock(message.sentAt)}
       </time>

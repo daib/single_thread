@@ -56,6 +56,52 @@ describe("ChatPanel", () => {
     expect(screen.getByText("Hello there")).toBeInTheDocument();
   });
 
+  it("renders Markdown in message bubbles", () => {
+    render(
+      <ChatPanel
+        conversation={sampleConversation({
+          messages: [
+            {
+              id: "m1",
+              role: "assistant",
+              body: "Use **bold** and a [link](https://example.com).",
+              sentAt: "2026-01-01T10:00:00.000Z",
+            },
+          ],
+        })}
+        onSend={noop}
+        onBranch={noop}
+      />,
+    );
+    const strong = document.querySelector(".message-md strong");
+    expect(strong?.textContent).toBe("bold");
+    const link = document.querySelector('.message-md a[href="https://example.com"]');
+    expect(link).toBeTruthy();
+    expect(link?.textContent).toBe("link");
+  });
+
+  it("renders Markdown in user message bubbles", () => {
+    render(
+      <ChatPanel
+        conversation={sampleConversation({
+          messages: [
+            {
+              id: "m1",
+              role: "user",
+              body: "**Note** sent.",
+              sentAt: "2026-01-01T10:00:00.000Z",
+            },
+          ],
+        })}
+        onSend={noop}
+        onBranch={noop}
+      />,
+    );
+    expect(
+      document.querySelector(".message-row.user .message-md strong")?.textContent,
+    ).toBe("Note");
+  });
+
   it("submits composer and calls onSend", async () => {
     const onSend = vi.fn();
     const user = userEvent.setup();
