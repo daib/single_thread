@@ -4,7 +4,6 @@ A demo exploring a different philosophy for AI-assisted reasoning: instead of co
 
 See [DESIGN.md](DESIGN.md) for the full design philosophy and motivation.
 
-![Alt Text](docs/Screenshot.png)
 ---
 
 ## The Problem With Linear Conversation
@@ -28,6 +27,47 @@ Memory sharing between branches is configurable. Sometimes perspectives should i
 This structure has a natural parallel in how rigorous thinking already works: a researcher running independent analyses before synthesis, a strategist developing a position and its strongest counter-argument without premature reconciliation, an engineer evaluating two architectures on their own terms before comparing them.
 
 The branching tool makes this structure explicit and persistent.
+
+---
+
+## The Tool In Practice
+
+The same artifact evaluated from two different perspectives produces genuinely different assessments. Neither is wrong. Together they are more complete than either alone.
+
+### What the tool looks like
+
+![Branching conversation UI](docs/Screenshot.png)
+
+The sidebar shows a real branching tree: *"Today is hot"* → *"The water looks lovely"* → *"I love diving"*. Branching is functional, navigable, and visually clear. The "Branched" label on the active conversation confirms the current thread's position in the tree.
+
+### Two agents evaluate the same screenshot
+
+**Technical agent:**
+
+> What's working
+>
+> Conversation branching visible in sidebar — the indented threads with arrows ✓
+> "Branched" label on the active conversation ✓
+> Branch icon button next to copy — clean interaction ✓
+> Conversation tree showing parent and children — exactly right ✓
+> Clean dark UI — professional ✓
+> Profile switching — "Chatting as SingleThread @singlethread" ✓
+> Timestamps on messages ✓
+> Multiple conversations in sidebar ✓
+>
+> The honest complete state: Singlethread — working demo ✓. DESIGN.md — exceptional ✓. Branching functional ✓. Profiles working ✓. **Message the Chief AI Officer this week. The demo is ready.**
+
+**Philosophical agent:**
+
+> The content is very casual — swimming, diving, pools. That's fine for testing but worth noting that the branching value isn't obvious from casual chitchat. The tool's purpose becomes clearer when the content is actually a complex problem requiring multiple perspectives. The professor will immediately ask to see it used for genuine reasoning not small talk.
+
+### What this demonstrates
+
+The technical agent evaluated implementation quality — and found it solid. The philosophical agent evaluated conceptual alignment with the tool's stated purpose — and found a gap. Both assessments are correct. Neither alone is sufficient.
+
+This is what branching perspective evaluation is for. A single agent asked to evaluate the screenshot would have converged on one framing. Two agents with different orientations, evaluating independently, surface something neither would have reached alone.
+
+The irony is deliberate: the tool demonstrated its own thesis through the process of being evaluated.
 
 ---
 
