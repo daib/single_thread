@@ -21,6 +21,7 @@ export function mapConversation(
     id: conv.id,
     profileId,
     branchOfId: conv.branchOfId ?? undefined,
+    isBranchInitialized: conv.isBranchInitialized,
     title: conv.title,
     preview:
       conv.preview ||

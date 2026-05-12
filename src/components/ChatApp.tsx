@@ -18,6 +18,7 @@ import {
 } from "@/lib/chatStorage";
 import { downloadConversationJson } from "@/lib/downloadConversation";
 import { requestLettaReply } from "@/lib/requestLettaReply";
+import { titleFromFirstUserMessage } from "@/lib/titleFromFirstUserMessage";
 import type { ChatProfileOption, Conversation, Message } from "@/types";
 
 let idCounter = 1000;
@@ -305,13 +306,18 @@ export function ChatApp() {
           const wasEmpty = c.messages.length === 0;
           const messages = [...c.messages, userMsg];
           let title = c.title;
-          if (wasEmpty && c.title === "New chat" && trimmed.length > 0) {
+          let isBranchInitialized = c.isBranchInitialized ?? true;
+          if (c.branchOfId && c.isBranchInitialized === false && trimmed.length > 0) {
+            title = titleFromFirstUserMessage(trimmed);
+            isBranchInitialized = true;
+          } else if (wasEmpty && c.title === "New chat" && trimmed.length > 0) {
             title = trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
           }
           return {
             ...c,
             profileId: profileAtSend,
             title,
+            isBranchInitialized,
             messages,
             preview: trimmed,
             updatedAt: now,
@@ -544,6 +550,7 @@ export function ChatApp() {
         id,
         profileId: pid,
         branchOfId: source.id,
+        isBranchInitialized: false,
         title: truncated,
         preview: upToMessageId
           ? lastBody.length > 0

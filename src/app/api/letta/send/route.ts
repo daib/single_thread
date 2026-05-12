@@ -10,15 +10,15 @@ import {
 import { createLettaClient } from "@/lib/lettaClient";
 import { resolveLettaAssistantReply } from "@/lib/resolveLettaAssistantReply";
 import { loadLettaEnvFile } from "@/lib/loadLettaEnvFile";
-import { requireOwnedConversation, requireOwnedProfile } from "@/lib/profileAccess";
 import { prisma } from "@/lib/prisma";
+import { requireOwnedConversation, requireOwnedProfile } from "@/lib/profileAccess";
+import { titleFromFirstUserMessage } from "@/lib/titleFromFirstUserMessage";
 
 export const runtime = "nodejs";
 
 loadLettaEnvFile();
 
 const LETTA_DEBUG_JSON_MAX = 24_000;
-const PROFILE_HISTORY_MAX_CHARS = 16_000;
 
 function jsonSnippet(value: unknown, maxChars: number): string {
   try {
@@ -129,38 +129,6 @@ async function sendAgentMessageCompatible(
   }
 }
 
-function trimHistoryTail(text: string, maxChars: number): string {
-  if (text.length <= maxChars) return text;
-  return text.slice(text.length - maxChars);
-}
-
-async function buildConversationHistoryContext(conversationId: string): Promise<string | null> {
-  const conv = await prisma.chatConversation.findUnique({
-    where: { id: conversationId },
-    include: { messages: { orderBy: { sentAt: "asc" } } },
-  });
-  if (!conv || conv.messages.length === 0) return null;
-
-  const lines: string[] = [`Conversation: ${conv.title}`];
-  for (const m of conv.messages) {
-    lines.push(`${m.role === "assistant" ? "Assistant" : "User"}: ${m.body}`);
-  }
-
-  const maxCharsRaw = Number.parseInt(
-    process.env.LETTA_PROFILE_HISTORY_MAX_CHARS?.trim() ?? "",
-    10,
-  );
-  const maxChars =
-    Number.isFinite(maxCharsRaw) && maxCharsRaw > 500
-      ? maxCharsRaw
-      : PROFILE_HISTORY_MAX_CHARS;
-  const bounded = trimHistoryTail(lines.join("\n"), maxChars);
-  return [
-    "Background from this conversation thread (most recent tail):",
-    bounded,
-  ].join("\n");
-}
-
 function withSendMessageNudge(text: string): string {
   return `${text}\n\n[Instruction for agent: respond to the user by calling send_message with your full answer. Do not end the turn without a user-visible message.]`;
 }
@@ -246,7 +214,6 @@ export async function POST(request: Request) {
   }
 
   let agentId: string | undefined;
-  let outboundUserText = bodyText;
   let lettaConversationId: string | undefined;
 
   if (profileIdRaw) {
@@ -300,18 +267,8 @@ export async function POST(request: Request) {
 
   try {
     const usedConversationThread = Boolean(lettaConversationId);
-    let effectiveOutboundUserText = outboundUserText;
-    if (!usedConversationThread && appConversationIdRaw) {
-      try {
-        const threadHistory = await buildConversationHistoryContext(appConversationIdRaw);
-        if (threadHistory) {
-          effectiveOutboundUserText = `${threadHistory}\n\nCurrent user message:\n${bodyText}`;
-        }
-      } catch (e) {
-        console.warn("[letta/send] could not build conversation history context:", e);
-      }
-    }
-    let currentTurnUserText = withSendMessageNudge(effectiveOutboundUserText);
+    /** Only the current user turn is sent to Letta; thread memory lives in the Letta conversation id. */
+    const currentTurnUserText = withSendMessageNudge(bodyText);
     let payload: unknown;
     if (usedConversationThread && lettaConversationId) {
       try {
@@ -358,6 +315,27 @@ export async function POST(request: Request) {
       reply == null
         ? "MemGPT-style agents only show text sent via the send_message tool. If the model stopped after inner monologue or another tool, there may be nothing user-visible — check Letta ADE / agent tools and server logs."
         : undefined;
+
+    if (appConversationIdRaw) {
+      try {
+        const derivedTitle = titleFromFirstUserMessage(bodyText);
+        await prisma.chatConversation.updateMany({
+          where: {
+            id: appConversationIdRaw,
+            branchOfId: { not: null },
+            isBranchInitialized: false,
+          },
+          data: {
+            title: derivedTitle,
+            preview: bodyText.trim().slice(0, 500),
+            isBranchInitialized: true,
+          },
+        });
+      } catch (e) {
+        console.warn("[letta/send] could not name uninitialized branch / set isBranchInitialized:", e);
+      }
+    }
+
     const responseBody = { reply: reply ?? null, ...(emptyHint ? { hint: emptyHint } : {}) };
     console.log("[letta/send] Next.js API response to client:", jsonSnippet(responseBody, 4_000));
     return NextResponse.json(responseBody);

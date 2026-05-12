@@ -13,6 +13,8 @@ export interface Conversation {
   profileId: string;
   /** Present when this thread was created via Branch from another conversation (same profile). */
   branchOfId?: string;
+  /** False until branch-specific initialization completes (e.g. first Letta context). */
+  isBranchInitialized?: boolean;
   title: string;
   preview: string;
   updatedAt: string;

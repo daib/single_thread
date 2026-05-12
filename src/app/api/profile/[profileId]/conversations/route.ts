@@ -127,12 +127,14 @@ export async function POST(
         : source.preview || (lastBody.length > 0 ? lastBody.slice(0, 500) : "");
 
       const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Branches start with is_branch_initialized = false until first Letta / setup completes.
         const newConv = await tx.chatConversation.create({
           data: {
             profileId,
             title: truncated,
             preview: branchPreview,
             branchOfId: source.id,
+            isBranchInitialized: false,
           },
         });
         for (const m of messagesToCopy) {
