@@ -1,4 +1,13 @@
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type MouseEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ChatMoreMenu } from "@/components/ChatMoreMenu";
 import { MessageMarkdown } from "@/components/MessageMarkdown";
 import { PortalTooltipButton } from "@/components/PortalTooltipButton";
@@ -19,14 +28,27 @@ interface Props {
   onDownload?: () => void;
 }
 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   message,
-  onBranchHere,
+  conversationId,
+  onBranch,
 }: {
   message: Message;
-  onBranchHere: (messageId: string) => void;
+  conversationId: string;
+  onBranch: (conversationId: string, upToMessageId?: string) => void;
 }) {
   const isUser = message.role === "user";
+  const handleCopy = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      void copyTextToClipboard(message.body);
+    },
+    [message.body],
+  );
+  const handleBranchHere = useCallback(() => {
+    onBranch(conversationId, message.id);
+  }, [onBranch, conversationId, message.id]);
+
   return (
     <div
       className={`message-row ${isUser ? "user" : "assistant"}`}
@@ -45,10 +67,7 @@ function MessageBubble({
           tooltip="Copy message"
           ariaLabel="Copy message to clipboard"
           className="chat-more-trigger chat-more-trigger-message"
-          onClick={(e) => {
-            e.stopPropagation();
-            void copyTextToClipboard(message.body);
-          }}
+          onClick={handleCopy}
         >
           <span aria-hidden className="chat-more-copy-icon">
             <svg
@@ -70,10 +89,58 @@ function MessageBubble({
         <ChatMoreMenu
           conversationLabel={`${isUser ? "Your" : "Assistant"} message`}
           variant="message"
-          onBranch={() => onBranchHere(message.id)}
+          onBranch={handleBranchHere}
         />
       </div>
     </div>
+  );
+});
+
+function ChatComposer({
+  conversationId,
+  onSend,
+}: {
+  conversationId: string;
+  onSend: (conversationId: string, body: string) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  const send = useCallback(() => {
+    const text = draft.trim();
+    if (!text) return;
+    onSend(conversationId, text);
+    setDraft("");
+  }, [conversationId, draft, onSend]);
+
+  const submit = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      send();
+    },
+    [send],
+  );
+
+  return (
+    <footer className="composer">
+      <form className="composer-inner" onSubmit={submit}>
+        <textarea
+          rows={1}
+          placeholder="Message…"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          aria-label="Message text"
+        />
+        <button type="submit" disabled={!draft.trim()}>
+          Send
+        </button>
+      </form>
+    </footer>
   );
 }
 
@@ -87,7 +154,6 @@ export function ChatPanel({
   onBranchThread,
   onDownload,
 }: Props) {
-  const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   /** Drop consecutive assistant rows with the same body (stale Letta repeats / old DB rows). */
@@ -121,18 +187,6 @@ export function ChatPanel({
       </main>
     );
   }
-
-  const send = () => {
-    const text = draft.trim();
-    if (!text) return;
-    onSend(conversation.id, text);
-    setDraft("");
-  };
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    send();
-  };
 
   const hasHeaderActions = Boolean(onRename || onDelete || onBranchThread || onDownload);
   const headerTriggerClass = "chat-more-trigger chat-more-trigger-header";
@@ -294,31 +348,13 @@ export function ChatPanel({
           <MessageBubble
             key={m.id}
             message={m}
-            onBranchHere={(messageId) => onBranch(conversation.id, messageId)}
+            conversationId={conversation.id}
+            onBranch={onBranch}
           />
         ))}
         <div ref={bottomRef} />
       </div>
-      <footer className="composer">
-        <form className="composer-inner" onSubmit={submit}>
-          <textarea
-            rows={1}
-            placeholder="Message…"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            aria-label="Message text"
-          />
-          <button type="submit" disabled={!draft.trim()}>
-            Send
-          </button>
-        </form>
-      </footer>
+      <ChatComposer key={conversation.id} conversationId={conversation.id} onSend={onSend} />
     </main>
   );
 }
