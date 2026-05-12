@@ -18,6 +18,7 @@ function dbConv(
     profileId: partial.profileId ?? "p1",
     preview: partial.preview ?? "",
     branchOfId: partial.branchOfId ?? null,
+    isBranchInitialized: partial.isBranchInitialized ?? false,
     lettaConversationId: partial.lettaConversationId ?? null,
     createdAt: partial.createdAt ?? new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: partial.updatedAt ?? new Date("2026-01-02T00:00:00.000Z"),
@@ -94,5 +95,12 @@ describe("mapConversation", () => {
   it("omits branchOfId when null", () => {
     const conv = dbConv({ id: "c1", title: "T", branchOfId: null }, []);
     expect(mapConversation(conv, "p1").branchOfId).toBeUndefined();
+  });
+
+  it("maps isBranchInitialized", () => {
+    const unset = dbConv({ id: "c1", title: "T" }, []);
+    expect(mapConversation(unset, "p1").isBranchInitialized).toBe(false);
+    const done = dbConv({ id: "c1", title: "T", isBranchInitialized: true }, []);
+    expect(mapConversation(done, "p1").isBranchInitialized).toBe(true);
   });
 });

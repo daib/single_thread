@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { deleteLettaAgentById } from "@/lib/lettaCreateProfileAgent";
+import { deleteLettaConversationBestEffort } from "@/lib/lettaConversationApi";
 import { prisma } from "@/lib/prisma";
 import { requireOwnedProfile } from "@/lib/profileAccess";
 
@@ -28,6 +29,21 @@ export async function DELETE(
   const lettaAgentId = profile.lettaAgentId?.trim();
 
   try {
+    const convRows = await prisma.chatConversation.findMany({
+      where: { profileId },
+      select: { lettaConversationId: true },
+    });
+    const lettaConversationIds = [
+      ...new Set(
+        convRows
+          .map((r) => r.lettaConversationId?.trim())
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    await Promise.all(
+      lettaConversationIds.map((id) => deleteLettaConversationBestEffort(id)),
+    );
+
     await prisma.appProfile.delete({ where: { id: profileId } });
     if (lettaAgentId) {
       await deleteLettaAgentById(lettaAgentId);
